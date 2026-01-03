@@ -1,0 +1,127 @@
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+    id 'com.google.firebase.crashlytics'
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace 'com.meetmighty.era'
+    compileSdkVersion 35
+    ndkVersion "29.0.13113456"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.meetmighty.era"
+        minSdkVersion 28
+        targetSdkVersion 35
+        versionCode 2
+        versionName "1.2"
+        multiDexEnabled true
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    def billing_version = "7.1.1"
+    implementation platform('com.google.firebase:firebase-bom:34.6.0')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.20"
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.browser:browser:1.3.0'
+    implementation("com.android.billingclient:billing:$billing_version")
+    implementation 'com.google.firebase:firebase-analytics'
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.core:core-ktx:1.6.0'
+    }
+}
+
+// Fix for Windows file locking issues
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("clean") || task.name.contains("Clean")) {
+        task.doFirst {
+            // Give Windows time to release file locks
+            sleep(1000)
+        }
+    }
+}
+
+// Handle mergeDebugAssets task more gracefully
+afterEvaluate {
+    def cleanMergeTask = tasks.findByName("cleanMergeDebugAssets")
+    if (cleanMergeTask != null) {
+        cleanMergeTask.doFirst {
+            def mergeDir = file("${buildDir}/intermediates/assets/debug/mergeDebugAssets")
+            if (mergeDir.exists()) {
+                try {
+                    // Try to delete with retry mechanism
+                    def retries = 3
+                    def delay = 1000
+                    for (int i = 0; i < retries; i++) {
+                        try {
+                            delete mergeDir
+                            break
+                        } catch (Exception e) {
+                            if (i < retries - 1) {
+                                sleep(delay)
+                                delay *= 2
+                            } else {
+                                println "Warning: Could not delete ${mergeDir}. You may need to close other processes or restart your IDE."
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    println "Warning: Could not delete mergeDebugAssets directory: ${e.message}"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "114914290664",
+    "project_id": "cylem-mobile-app",
+    "storage_bucket": "cylem-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:114914290664:android:5704e850f3b1660664925d",
+        "android_client_info": {
+          "package_name": "com.meetmighty.era"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTOaGLskIl67lnqJ1NC1OpyaRiQQIjwE8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
