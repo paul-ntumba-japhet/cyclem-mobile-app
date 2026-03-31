@@ -6,6 +6,9 @@
 -dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
 -dontwarn proguard.annotation.Keep
 -dontwarn proguard.annotation.KeepClassMembers
+-dontwarn kotlinx.parcelize.Parceler$DefaultImpls
+-dontwarn kotlinx.parcelize.Parceler
+-dontwarn kotlinx.parcelize.Parcelize
 -keep class com.paytm.pgsdk.model.ProcessTransactionInfo { *; }
 -keep class com.paytm.pgsdk.model.Body { *; }
 -keep class com.braintreepayments.api.** { *; }

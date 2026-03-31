@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 // App Color
 
-const primaryColor = Color(0xffF44087);
+const primaryColor = Color.fromRGBO(166, 8, 8, 1.0); // RGB(166, 8, 8)
 const kPrimaryColor = Color(0xFFFEECF3);
 const primaryColorShade = Color(0xffFA658C);
 const primaryLightColor = Color(0xFFFF89A8);

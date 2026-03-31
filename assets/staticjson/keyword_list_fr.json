@@ -1549,13 +1549,13 @@
           "screenId": "25",
           "keyword_id": 181,
           "keyword_name": "yes",
-          "keyword_value": "Yes"
+          "keyword_value": "Oui"
         },
         {
           "screenId": "25",
           "keyword_id": 182,
           "keyword_name": "no",
-          "keyword_value": "No"
+          "keyword_value": "Non"
         },
         {
           "screenId": "25",
@@ -1609,7 +1609,7 @@
           "screenId": "26",
           "keyword_id": 160,
           "keyword_name": "password",
-          "keyword_value": "Password"
+          "keyword_value": "Mot de passe"
         },
         {
           "screenId": "26",
@@ -1852,13 +1852,13 @@
           "screenId": "32",
           "keyword_id": 196,
           "keyword_name": "oldPassword",
-          "keyword_value": "Old Password"
+          "keyword_value": "Ancien mot de passe"
         },
         {
           "screenId": "32",
           "keyword_id": 197,
           "keyword_name": "pleaseEnterPassword",
-          "keyword_value": "Please enter password"
+          "keyword_value": "Veuillez entrer le mot de passe"
         },
         {
           "screenId": "32",
@@ -1870,25 +1870,25 @@
           "screenId": "32",
           "keyword_id": 199,
           "keyword_name": "newPassword",
-          "keyword_value": "New Password"
+          "keyword_value": "Nouveau mot de passe"
         },
         {
           "screenId": "32",
           "keyword_id": 200,
           "keyword_name": "confirmPassword",
-          "keyword_value": "Confirm Password"
+          "keyword_value": "Confirmer le mot de passe"
         },
         {
           "screenId": "32",
           "keyword_id": 201,
           "keyword_name": "PleaseConfirmYourPassword",
-          "keyword_value": "Please confirm your password"
+          "keyword_value": "Veuillez confirmer votre mot de passe"
         },
         {
           "screenId": "32",
           "keyword_id": 202,
           "keyword_name": "passwordDoNotMatch",
-          "keyword_value": "Passwords do not match"
+          "keyword_value": "Les mots de passe ne correspondent pas"
         },
         {
           "screenId": "32",
@@ -1948,7 +1948,7 @@
           "screenId": "32",
           "keyword_id": 465,
           "keyword_name": "passwordsDoNotMatch",
-          "keyword_value": "Passwords don't match. Please re-enter."
+          "keyword_value": "Les mots de passe ne correspondent pas. Veuillez réessayer."
         },
         {
           "screenId": "32",
@@ -2392,7 +2392,7 @@
           "screenId": "42",
           "keyword_id": 286,
           "keyword_name": "pleaseWait",
-          "keyword_value": "Please Wait"
+          "keyword_value": "Veuillez patienter"
         },
         {
           "screenId": "42",
@@ -3720,6 +3720,729 @@
           "keyword_name": "addACommentAnonymously",
           "keyword_value": "Ajoute un commentaire, de façon anonyme..."
         }
+      ]
+    },
+    {
+      "screenID": "58",
+      "ScreenName": "NotificationSettings",
+      "keyword_data": [
+        {
+          "screenId": "58",
+          "keyword_id": 662,
+          "keyword_name": "testNotification",
+          "keyword_value": "Test de notification"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 663,
+          "keyword_name": "testNotificationTitle",
+          "keyword_value": "Test de notification"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 664,
+          "keyword_name": "testNotificationBody",
+          "keyword_value": "Ceci est une notification de test. Si vous voyez ce message, le système de notifications fonctionne correctement!"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 665,
+          "keyword_name": "testNotificationSent",
+          "keyword_value": "Notification de test envoyée! Elle devrait apparaître immédiatement."
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 666,
+          "keyword_name": "testNotificationError",
+          "keyword_value": "Erreur lors de l'envoi de la notification de test: {error}"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 667,
+          "keyword_name": "viewAllNotifications",
+          "keyword_value": "Voir toutes les notifications"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 668,
+          "keyword_name": "scheduledNotifications",
+          "keyword_value": "Notifications programmées ({count})"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 669,
+          "keyword_name": "noScheduledNotifications",
+          "keyword_value": "Aucune notification programmée."
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 670,
+          "keyword_name": "noTitle",
+          "keyword_value": "Sans titre"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 671,
+          "keyword_name": "notScheduled",
+          "keyword_value": "Non programmée"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 672,
+          "keyword_name": "notificationDeleted",
+          "keyword_value": "Notification supprimée"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 673,
+          "keyword_name": "errorLoadingNotifications",
+          "keyword_value": "Erreur lors du chargement des notifications: {error}"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 674,
+          "keyword_name": "close",
+          "keyword_value": "Fermer"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 675,
+          "keyword_name": "fertileWindowStart",
+          "keyword_value": "Période fertile - Début"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 676,
+          "keyword_name": "fertileWindowStartBody",
+          "keyword_value": "Votre période fertile commence aujourd'hui. C'est le moment où vous avez le plus de chances de tomber enceinte."
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 677,
+          "keyword_name": "fertileWindowEnd",
+          "keyword_value": "Période fertile - Fin"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 678,
+          "keyword_name": "fertileWindowEndBody",
+          "keyword_value": "Votre période fertile se termine aujourd'hui. Le risque de grossesse diminue maintenant."
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 679,
+          "keyword_name": "nextPeriodExpected",
+          "keyword_value": "Prochaines règles attendues"
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 680,
+          "keyword_name": "nextPeriodExpectedBody",
+          "keyword_value": "Vos prochaines règles sont attendues dans les prochains jours. Préparez-vous en conséquence."
+        },
+        {
+          "screenId": "58",
+          "keyword_id": 681,
+          "keyword_name": "notificationsNotAllowed",
+          "keyword_value": "Les notifications ne sont pas autorisées. Veuillez les activer dans les paramètres."
+        }
+      ]
+    },
+    {
+      "screenID": "59",
+      "ScreenName": "OnboardingAndAuth",
+      "keyword_data": [
+        {
+          "screenId": "59",
+          "keyword_id": 682,
+          "keyword_name": "verifyYourPhoneNumber",
+          "keyword_value": "Vérifiez votre numéro de téléphone"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 683,
+          "keyword_name": "completeYourProfile",
+          "keyword_value": "Complétez votre profil"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 684,
+          "keyword_name": "dateSelected",
+          "keyword_value": "Date sélectionnée"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 685,
+          "keyword_name": "youHaveSelected",
+          "keyword_value": "Vous avez sélectionné:"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 686,
+          "keyword_name": "doYouWantToContinueWithThisDate",
+          "keyword_value": "Souhaitez-vous continuer avec cette date?"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 687,
+          "keyword_name": "completeRegistration",
+          "keyword_value": "Compléter l'inscription"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 688,
+          "keyword_name": "enterAccessCodeAndPassword",
+          "keyword_value": "Entrez votre code d'accès et créez un mot de passe pour compléter votre inscription."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 689,
+          "keyword_name": "accessCode",
+          "keyword_value": "Code d'accès"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 690,
+          "keyword_name": "fiveDigitCode",
+          "keyword_value": "Code à 5 chiffres"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 691,
+          "keyword_name": "pleaseEnterAccessCode",
+          "keyword_value": "Veuillez insérer votre code d'accès"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 692,
+          "keyword_name": "codeMustHaveFiveDigits",
+          "keyword_value": "Le code doit avoir 5 chiffres"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 693,
+          "keyword_name": "codeMustContainOnlyDigits",
+          "keyword_value": "Le code d'accès doit contenir uniquement les chiffres"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 694,
+          "keyword_name": "password",
+          "keyword_value": "Mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 695,
+          "keyword_name": "enterYourPassword",
+          "keyword_value": "Insérez votre mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 696,
+          "keyword_name": "pleaseEnterPassword",
+          "keyword_value": "Veuillez insérer votre mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 697,
+          "keyword_name": "passwordMustHaveAtLeastSixCharacters",
+          "keyword_value": "Le mot de passe doit avoir au moins 6 caractères"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 698,
+          "keyword_name": "confirmPassword",
+          "keyword_value": "Confirmation mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 699,
+          "keyword_name": "confirmYourPassword",
+          "keyword_value": "Confirmez votre mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 700,
+          "keyword_name": "pleaseConfirmPassword",
+          "keyword_value": "Veuillez confirmer votre mot de passe"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 701,
+          "keyword_name": "passwordsDoNotMatch",
+          "keyword_value": "Les mots de passe ne correspondent pas"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 702,
+          "keyword_name": "phoneNumberNotFound",
+          "keyword_value": "Numéro de téléphone introuvable. Veuillez d'abord vérifier votre numéro de téléphone."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 703,
+          "keyword_name": "configuringYourAccount",
+          "keyword_value": "Configuration de votre compte..."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 704,
+          "keyword_name": "pleaseWait",
+          "keyword_value": "Veuillez patienter"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 705,
+          "keyword_name": "checkCycleInformation",
+          "keyword_value": "Vérifier les informations du cycle"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 706,
+          "keyword_name": "cycleVerification",
+          "keyword_value": "Vérification du cycle"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 707,
+          "keyword_name": "notAvailable",
+          "keyword_value": "Non disponible"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 708,
+          "keyword_name": "requiredDates",
+          "keyword_value": "Dates requises:"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 709,
+          "keyword_name": "lastPeriod",
+          "keyword_value": "Dernières règles (dateRegle)"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 710,
+          "keyword_name": "nextPeriodStart",
+          "keyword_value": "Prochaines règles (début)"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 711,
+          "keyword_name": "nextPeriodEnd",
+          "keyword_value": "Prochaines règles (fin)"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 714,
+          "keyword_name": "allDatesAvailable",
+          "keyword_value": "Toutes les dates sont disponibles"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 715,
+          "keyword_name": "someDatesMissing",
+          "keyword_value": "Certaines dates sont manquantes"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 716,
+          "keyword_name": "menstrualCalendar",
+          "keyword_value": "Calendrier Menstruel"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 717,
+          "keyword_name": "monthlyCalendar",
+          "keyword_value": "Calendrier Mensuel"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 718,
+          "keyword_name": "pleaseLoadCycleInfo",
+          "keyword_value": "Veuillez charger les informations du cycle pour afficher le calendrier"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 719,
+          "keyword_name": "legend",
+          "keyword_value": "Légende"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 720,
+          "keyword_name": "fertilePeriod",
+          "keyword_value": "Période fertile"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 721,
+          "keyword_name": "otherDays",
+          "keyword_value": "Période infertile"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 722,
+          "keyword_name": "phoneNumberNotAvailable",
+          "keyword_value": "Numéro de téléphone non disponible"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 723,
+          "keyword_name": "failedToLoadTransactions",
+          "keyword_value": "Échec du chargement des transactions"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 724,
+          "keyword_name": "article",
+          "keyword_value": "Article"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 725,
+          "keyword_name": "onboardingAnswers",
+          "keyword_value": "Réponses d'intégration"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 726,
+          "keyword_name": "noOnboardingDataFound",
+          "keyword_value": "Aucune donnée d'intégration trouvée"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 727,
+          "keyword_name": "step1UsingEra",
+          "keyword_value": "Étape 1: Utilisation d'Era"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 728,
+          "keyword_name": "areYouUsingEraForYourself",
+          "keyword_value": "Utilisez-vous Era pour vous-même?"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 729,
+          "keyword_name": "notAnswered",
+          "keyword_value": "Non répondu"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 730,
+          "keyword_name": "step2GoalType",
+          "keyword_value": "Étape 2: Type d'objectif"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 731,
+          "keyword_name": "whatIsYourGoal",
+          "keyword_value": "Quel est votre objectif?"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 732,
+          "keyword_name": "step2PhoneVerification",
+          "keyword_value": "Étape 2: Vérification du téléphone"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 733,
+          "keyword_name": "phoneNumber",
+          "keyword_value": "Numéro de téléphone"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 734,
+          "keyword_name": "notProvided",
+          "keyword_value": "Non fourni"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 735,
+          "keyword_name": "verificationStatus",
+          "keyword_value": "Statut de vérification"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 736,
+          "keyword_name": "verified",
+          "keyword_value": "Vérifié"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 737,
+          "keyword_name": "notVerified",
+          "keyword_value": "Non vérifié"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 738,
+          "keyword_name": "step3PersonalInformation",
+          "keyword_value": "Étape 3: Informations personnelles"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 739,
+          "keyword_name": "fullName",
+          "keyword_value": "Nom complet"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 741,
+          "keyword_name": "step4HealthQuestions",
+          "keyword_value": "Étape 4: Questions de santé"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 742,
+          "keyword_name": "doYouHaveExistingHealthConditions",
+          "keyword_value": "Avez-vous des problèmes de santé existants?"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 743,
+          "keyword_name": "areYouCurrentlyTakingMedications",
+          "keyword_value": "Prenez-vous actuellement des médicaments?"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 744,
+          "keyword_name": "authenticating",
+          "keyword_value": "Authentification..."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 745,
+          "keyword_name": "loginFailed",
+          "keyword_value": "Échec de la connexion"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 746,
+          "keyword_name": "unableToLogin",
+          "keyword_value": "Impossible de se connecter. Veuillez vérifier vos identifiants et réessayer."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 747,
+          "keyword_name": "accountInactive",
+          "keyword_value": "Compte inactif"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 748,
+          "keyword_name": "accountInactiveMessage",
+          "keyword_value": "Votre compte est actuellement inactif. Veuillez contacter le support pour obtenir de l'aide."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 749,
+          "keyword_name": "unexpectedError",
+          "keyword_value": "Une erreur inattendue s'est produite. Veuillez réessayer."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 750,
+          "keyword_name": "loginError",
+          "keyword_value": "Erreur de connexion"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 751,
+          "keyword_name": "invalidCredentials",
+          "keyword_value": "Numéro de téléphone ou mot de passe invalide. Veuillez vérifier vos identifiants et réessayer."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 752,
+          "keyword_name": "userNotRegistered",
+          "keyword_value": "Utilisateur non enregistré"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 753,
+          "keyword_name": "phoneNotRegistered",
+          "keyword_value": "Ce numéro de téléphone n'est pas enregistré dans le système. Veuillez d'abord compléter le processus d'inscription ou contacter le support pour obtenir de l'aide."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 754,
+          "keyword_name": "networkError",
+          "keyword_value": "Erreur réseau. Veuillez vérifier votre connexion Internet et réessayer."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 755,
+          "keyword_name": "testError",
+          "keyword_value": "Erreur de test"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 756,
+          "keyword_name": "pleaseEnterPhoneAndPassword",
+          "keyword_value": "Veuillez entrer le numéro de téléphone et le mot de passe pour tester."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 757,
+          "keyword_name": "testingLoginLogic",
+          "keyword_value": "Test de la logique de connexion..."
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 758,
+          "keyword_name": "loginTestFailed",
+          "keyword_value": "Échec du test de connexion"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 759,
+          "keyword_name": "loginTestSuccessful",
+          "keyword_value": "Test de connexion réussi"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 760,
+          "keyword_name": "allLoginTestsPassed",
+          "keyword_value": "Tous les tests de logique de connexion ont réussi!"
+        },
+        {
+          "screenId": "59",
+          "keyword_id": 761,
+          "keyword_name": "cycleInfoFetchedSuccessfully",
+          "keyword_value": "Informations sur le cycle récupérées avec succès!"
+        }
+      ]
+    },
+    {
+      "screenID": "60",
+      "ScreenName": "AppCommon",
+      "keyword_data": [
+        {"screenId": "60", "keyword_id": 762, "keyword_name": "activateYourCollier", "keyword_value": "Activez votre collier"},
+        {"screenId": "60", "keyword_id": 763, "keyword_name": "periodDateNotAvailable", "keyword_value": "Date de règles non disponible"},
+        {"screenId": "60", "keyword_id": 764, "keyword_name": "invalidDate", "keyword_value": "Date invalide"},
+        {"screenId": "60", "keyword_id": 765, "keyword_name": "calculationError", "keyword_value": "Erreur de calcul"},
+        {"screenId": "60", "keyword_id": 766, "keyword_name": "legendMenstrualCycle", "keyword_value": "Légende du cycle menstruel"},
+        {"screenId": "60", "keyword_id": 767, "keyword_name": "periodDateLabel", "keyword_value": "Date des règles"},
+        {"screenId": "60", "keyword_id": 768, "keyword_name": "lowRiskPeriod", "keyword_value": "Période à faible risque de grossesse"},
+        {"screenId": "60", "keyword_id": 769, "keyword_name": "highRiskPeriod", "keyword_value": "Période à risque élevé de grossesse"},
+        {"screenId": "60", "keyword_id": 770, "keyword_name": "nextPeriodDateLabel", "keyword_value": "Date prévue des prochaines règles"},
+        {"screenId": "60", "keyword_id": 771, "keyword_name": "periodDateSavedSuccess", "keyword_value": "Date des règles enregistrée avec succès."},
+        {"screenId": "60", "keyword_id": 772, "keyword_name": "failedToSavePeriodDate", "keyword_value": "Échec de l'enregistrement. Veuillez réessayer."},
+        {"screenId": "60", "keyword_id": 773, "keyword_name": "phoneNotAvailablePleaseReconnect", "keyword_value": "Numéro de téléphone non disponible. Veuillez vous reconnecter."},
+        {"screenId": "60", "keyword_id": 774, "keyword_name": "errorLabel", "keyword_value": "Erreur"},
+        {"screenId": "60", "keyword_id": 775, "keyword_name": "typeYourMessage", "keyword_value": "Tapez votre message..."},
+        {"screenId": "60", "keyword_id": 776, "keyword_name": "startConversation", "keyword_value": "Commencez une conversation"},
+        {"screenId": "60", "keyword_id": 777, "keyword_name": "ikChatbotTitle", "keyword_value": "Service d'assistance CycleM"},
+        {"screenId": "60", "keyword_id": 778, "keyword_name": "defaultWelcomeMessage", "keyword_value": "Bonjour! Je suis votre assistant virtuel. Comment puis-je vous aider aujourd'hui?"},
+        {"screenId": "60", "keyword_id": 779, "keyword_name": "phoneNotFoundReconnect", "keyword_value": "Erreur: Numéro de téléphone non trouvé. Veuillez vous reconnecter."},
+        {"screenId": "60", "keyword_id": 780, "keyword_name": "serverErrorTryAgain", "keyword_value": "Erreur: Impossible de contacter le serveur. Veuillez réessayer plus tard."},
+        {"screenId": "60", "keyword_id": 781, "keyword_name": "datesDesReglesEnvoyeesCodeRecu", "keyword_value": "Dates des règles envoyées codeRecu"},
+        {"screenId": "60", "keyword_id": 782, "keyword_name": "monthLabel", "keyword_value": "Mois"},
+        {"screenId": "60", "keyword_id": 783, "keyword_name": "dayLabel", "keyword_value": "Jour"},
+        {"screenId": "60", "keyword_id": 784, "keyword_name": "refreshTooltip", "keyword_value": "Actualiser"},
+        {"screenId": "60", "keyword_id": 785, "keyword_name": "noPeriodDataAvailable", "keyword_value": "Aucune donnée de période disponible"},
+        {"screenId": "60", "keyword_id": 786, "keyword_name": "loading", "keyword_value": "Chargement..."},
+        {"screenId": "60", "keyword_id": 787, "keyword_name": "saving", "keyword_value": "Enregistrement en cours..."},
+        {"screenId": "60", "keyword_id": 788, "keyword_name": "subscriptionAndPeriodDateSaved", "keyword_value": "Abonnement et date des règles enregistrés avec succès."},
+        {"screenId": "60", "keyword_id": 789, "keyword_name": "failedToSavePeriodDatePleaseTryAgain", "keyword_value": "Échec de l'enregistrement de la date des règles. Veuillez réessayer."},
+        {"screenId": "60", "keyword_id": 790, "keyword_name": "firstDayPeriod", "keyword_value": "1er jour règles"},
+        {"screenId": "60", "keyword_id": 791, "keyword_name": "day27", "keyword_value": "Apparition de prochaines règles"},
+        {"screenId": "60", "keyword_id": 792, "keyword_name": "calendarLabel", "keyword_value": "Calendrier"},
+        {"screenId": "60", "keyword_id": 793, "keyword_name": "homeLabel", "keyword_value": "Accueil"},
+        {"screenId": "60", "keyword_id": 794, "keyword_name": "chatLabel", "keyword_value": "Chat"},
+        {"screenId": "60", "keyword_id": 795, "keyword_name": "lowPregnancyRisk", "keyword_value": "Risque de grossesse faible"},
+        {"screenId": "60", "keyword_id": 796, "keyword_name": "highPregnancyRisk", "keyword_value": "Risque de grossesse élevé"},
+        {"screenId": "60", "keyword_id": 797, "keyword_name": "periodDatesSent", "keyword_value": "Dates des règles envoyées"},
+        {"screenId": "60", "keyword_id": 798, "keyword_name": "notSelected", "keyword_value": "Non sélectionné"},
+        {"screenId": "60", "keyword_id": 799, "keyword_name": "consultedDoctorAboutCycle", "keyword_value": "Avez-vous consulté un médecin récemment pour votre cycle ?"},
+        {"screenId": "60", "keyword_id": 800, "keyword_name": "step3PeriodInformation", "keyword_value": "Étape 3 : Informations sur les règles"},
+        {"screenId": "60", "keyword_id": 801, "keyword_name": "lastPeriodDate", "keyword_value": "Date des dernières règles"},
+        {"screenId": "60", "keyword_id": 802, "keyword_name": "step4CycleInformation", "keyword_value": "Étape 4 : Informations sur le cycle"},
+        {"screenId": "60", "keyword_id": 803, "keyword_name": "periodDuration", "keyword_value": "Durée des règles"},
+        {"screenId": "60", "keyword_id": 804, "keyword_name": "lutealPhase", "keyword_value": "Phase lutéale"},
+        {"screenId": "60", "keyword_id": 805, "keyword_name": "step7AdditionalInformation", "keyword_value": "Étape 7 : Informations complémentaires"},
+        {"screenId": "60", "keyword_id": 806, "keyword_name": "nameFromStep7", "keyword_value": "Nom (étape 7)"},
+        {"screenId": "60", "keyword_id": 807, "keyword_name": "birthYear", "keyword_value": "Année de naissance"},
+        {"screenId": "60", "keyword_id": 808, "keyword_name": "unableToCalculate", "keyword_value": "Impossible de calculer"},
+        {"screenId": "60", "keyword_id": 810, "keyword_name": "ageLabel", "keyword_value": "Âge"},
+        {"screenId": "60", "keyword_id": 811, "keyword_name": "phoneNumberRequired", "keyword_value": "Le numéro de téléphone est requis"},
+        {"screenId": "60", "keyword_id": 812, "keyword_name": "pleaseEnterValidPhoneNumber", "keyword_value": "Veuillez entrer un numéro de téléphone valide"},
+        {"screenId": "60", "keyword_id": 813, "keyword_name": "enterPhoneNumber", "keyword_value": "Entrez le numéro de téléphone"},
+        {"screenId": "60", "keyword_id": 814, "keyword_name": "processing", "keyword_value": "Traitement en cours..."},
+        {"screenId": "60", "keyword_id": 815, "keyword_name": "weWillSendYouCodeToResetPassword", "keyword_value": "Nous vous enverrons un code de vérification à 6 chiffres (SMS) pour réinitialiser votre mot de passe"},
+        {"screenId": "60", "keyword_id": 816, "keyword_name": "enterFiveDigitCode", "keyword_value": "Entrez le code à 6 chiffres reçu par SMS"},
+        {"screenId": "60", "keyword_id": 817, "keyword_name": "pleaseEnterCompleteFiveDigitCode", "keyword_value": "Veuillez entrer le code à 6 chiffres complet"},
+        {"screenId": "60", "keyword_id": 818, "keyword_name": "authCodeNotAvailableTryAgain", "keyword_value": "Code d'authentification non disponible. Veuillez réessayer."},
+        {"screenId": "60", "keyword_id": 819, "keyword_name": "invalidCodeTryAgain", "keyword_value": "Code invalide. Veuillez réessayer."},
+        {"screenId": "60", "keyword_id": 820, "keyword_name": "failedToGetAuthCode", "keyword_value": "Échec de l'obtention du code d'authentification"},
+        {"screenId": "60", "keyword_id": 821, "keyword_name": "verifying", "keyword_value": "Vérification..."},
+        {"screenId": "60", "keyword_id": 822, "keyword_name": "verifyCode", "keyword_value": "Vérifier le code"},
+        {"screenId": "60", "keyword_id": 823, "keyword_name": "resetPassword", "keyword_value": "Réinitialiser le mot de passe"},
+        {"screenId": "60", "keyword_id": 824, "keyword_name": "createNewPassword", "keyword_value": "Créer un nouveau mot de passe"},
+        {"screenId": "60", "keyword_id": 825, "keyword_name": "pleaseEnterNewPasswordBelow", "keyword_value": "Veuillez entrer votre nouveau mot de passe ci-dessous"},
+        {"screenId": "60", "keyword_id": 826, "keyword_name": "enterNewPassword", "keyword_value": "Entrez le nouveau mot de passe"},
+        {"screenId": "60", "keyword_id": 827, "keyword_name": "passwordResetSuccess", "keyword_value": "Mot de passe réinitialisé avec succès"},
+        {"screenId": "60", "keyword_id": 828, "keyword_name": "failedToResetPassword", "keyword_value": "Échec de la réinitialisation du mot de passe"},
+        {"screenId": "60", "keyword_id": 829, "keyword_name": "errorResettingPassword", "keyword_value": "Une erreur s'est produite lors de la réinitialisation du mot de passe"},
+        {"screenId": "60", "keyword_id": 830, "keyword_name": "noServerResponse", "keyword_value": "Désolé, pas de réponse du serveur."},
+        {"screenId": "60", "keyword_id": 831, "keyword_name": "pleaseWaitPersonalizedResponse", "keyword_value": "Veuillez patienter quelques instants le temps que l'on vous fournisse une réponse personnalisée qui prend en compte l'état de votre cycle et votre situation générale"},
+        {"screenId": "60", "keyword_id": 832, "keyword_name": "chatbotClosingMessage", "keyword_value": "Je reste à votre disposition si vous avez des questions ou si vous rencontrez une difficulté."},
+        {"screenId": "60", "keyword_id": 833, "keyword_name": "somethingWentWrong", "keyword_value": "Une erreur s'est produite"},
+        {"screenId": "60", "keyword_id": 834, "keyword_name": "cacheClearedSuccess", "keyword_value": "Cache vidé avec succès. Vous pouvez maintenant tester l'inscription/connexion."},
+        {"screenId": "60", "keyword_id": 835, "keyword_name": "errorClearingCache", "keyword_value": "Erreur lors de la suppression du cache"},
+        {"screenId": "60", "keyword_id": 836, "keyword_name": "clearCacheData", "keyword_value": "Vider le cache"},
+        {"screenId": "60", "keyword_id": 837, "keyword_name": "clearAllCacheDataConfirm", "keyword_value": "Vider tout le cache ?"},
+        {"screenId": "60", "keyword_id": 838, "keyword_name": "yesClear", "keyword_value": "Oui, vider"},
+        {"screenId": "60", "keyword_id": 839, "keyword_name": "whatIsLutealPhase", "keyword_value": "Qu'est-ce que la phase lutéale ?"},
+        {"screenId": "60", "keyword_id": 840, "keyword_name": "lutealPhaseDescription", "keyword_value": "La phase lutéale est la période entre l'ovulation et le début de vos règles. Enregistrer sa durée permet d'améliorer la précision des prédictions d'ovulation."},
+        {"screenId": "60", "keyword_id": 841, "keyword_name": "completeYourProfileDescription", "keyword_value": "Aidez-nous à personnaliser votre expérience en indiquant votre âge"},
+        {"screenId": "60", "keyword_id": 842, "keyword_name": "whatYearWereYouBorn", "keyword_value": "En quelle année êtes-vous née ?"},
+        {"screenId": "60", "keyword_id": 843, "keyword_name": "doYouHavePeriodAlmostEveryMonth", "keyword_value": "Avez-vous vos règles presque chaque mois ?"},
+        {"screenId": "60", "keyword_id": 844, "keyword_name": "doYouHavePeriodWhenExpected", "keyword_value": "Avez-vous vos règles quand vous les attendez autour des mêmes dates ?"},
+        {"screenId": "60", "keyword_id": 845, "keyword_name": "areYouBreastfeeding", "keyword_value": "Est-ce que vous allaitez ?"},
+        {"screenId": "60", "keyword_id": 846, "keyword_name": "pleaseVerifyPhoneToContinue", "keyword_value": "Veuillez vérifier votre numéro de téléphone pour continuer"},
+        {"screenId": "60", "keyword_id": 847, "keyword_name": "pleaseEnterFullName", "keyword_value": "Veuillez entrer votre nom complet"},
+        {"screenId": "60", "keyword_id": 848, "keyword_name": "pleaseEnterYourEmailAddress", "keyword_value": "Veuillez entrer votre adresse e-mail"},
+        {"screenId": "60", "keyword_id": 849, "keyword_name": "pleaseSelectAnAnswer", "keyword_value": "Veuillez sélectionner une réponse"},
+        {"screenId": "60", "keyword_id": 850, "keyword_name": "phoneNumberNotFoundVerifyFirst", "keyword_value": "Numéro de téléphone non trouvé. Veuillez d'abord vérifier votre numéro."},
+        {"screenId": "60", "keyword_id": 851, "keyword_name": "emailNotFoundCompleteProfileFirst", "keyword_value": "E-mail non trouvé. Veuillez d'abord compléter votre profil."},
+        {"screenId": "60", "keyword_id": 852, "keyword_name": "nameNotFoundCompleteProfileFirst", "keyword_value": "Nom non trouvé. Veuillez d'abord compléter votre profil."},
+        {"screenId": "60", "keyword_id": 853, "keyword_name": "errorCompletingSubscription", "keyword_value": "Erreur lors de l'abonnement"},
+        {"screenId": "60", "keyword_id": 854, "keyword_name": "pleaseSelectDateOfLastPeriod", "keyword_value": "Veuillez sélectionner la date de vos dernières règles"},
+        {"screenId": "60", "keyword_id": 855, "keyword_name": "pleaseSelectYourAge", "keyword_value": "Veuillez sélectionner votre âge"},
+        {"screenId": "60", "keyword_id": 856, "keyword_name": "pleaseProvideFullNameAndEmailToCompleteProfile", "keyword_value": "Veuillez indiquer votre nom complet et votre adresse e-mail pour compléter votre profil."},
+        {"screenId": "60", "keyword_id": 857, "keyword_name": "enterYourFullName", "keyword_value": "Entrez votre nom complet"},
+        {"screenId": "60", "keyword_id": 858, "keyword_name": "emailAddress", "keyword_value": "Adresse e-mail"},
+        {"screenId": "60", "keyword_id": 859, "keyword_name": "enterYourEmailAddress", "keyword_value": "Entrez votre adresse e-mail"},
+        {"screenId": "60", "keyword_id": 860, "keyword_name": "pleaseEnterValidEmailAddress", "keyword_value": "Veuillez entrer une adresse e-mail valide"},
+        {"screenId": "60", "keyword_id": 861, "keyword_name": "pleaseEnterYourPhoneNumber", "keyword_value": "Veuillez entrer votre numéro de téléphone"},
+        {"screenId": "60", "keyword_id": 862, "keyword_name": "pleaseEnterValidPhoneNumber", "keyword_value": "Veuillez entrer un numéro de téléphone valide"},
+        {"screenId": "60", "keyword_id": 863, "keyword_name": "sendingVerificationCode", "keyword_value": "Envoi du code de vérification..."},
+        {"screenId": "60", "keyword_id": 864, "keyword_name": "otpSentSuccessfully", "keyword_value": "Code envoyé avec succès"},
+        {"screenId": "60", "keyword_id": 865, "keyword_name": "pleaseEnterComplete4DigitOtp", "keyword_value": "Veuillez entrer le code OTP à 4 chiffres"},
+        {"screenId": "60", "keyword_id": 866, "keyword_name": "pleaseSendOtpFirst", "keyword_value": "Veuillez d'abord envoyer le code OTP"},
+        {"screenId": "60", "keyword_id": 867, "keyword_name": "verifyingCode", "keyword_value": "Vérification du code..."},
+        {"screenId": "60", "keyword_id": 868, "keyword_name": "phoneNumberVerifiedSuccessfully", "keyword_value": "Numéro de téléphone vérifié avec succès"},
+        {"screenId": "60", "keyword_id": 869, "keyword_name": "pleaseWaitSecondsBeforeResending", "keyword_value": "Veuillez attendre %s secondes avant de renvoyer"},
+        {"screenId": "60", "keyword_id": 870, "keyword_name": "pleaseVerifyPhoneNumberDescription", "keyword_value": "Veuillez vérifier votre numéro de téléphone pour continuer. Nous vous enverrons un code de vérification par SMS."},
+        {"screenId": "60", "keyword_id": 871, "keyword_name": "sendVerificationCode", "keyword_value": "Envoyer le code de vérification"},
+        {"screenId": "60", "keyword_id": 872, "keyword_name": "enterVerificationCode", "keyword_value": "Entrez le code de vérification"},
+        {"screenId": "60", "keyword_id": 873, "keyword_name": "verifyCode", "keyword_value": "Vérifier le code"},
+        {"screenId": "60", "keyword_id": 874, "keyword_name": "didntReceiveCode", "keyword_value": "Vous n'avez pas reçu le code ? "},
+        {"screenId": "60", "keyword_id": 875, "keyword_name": "resendCode", "keyword_value": "Renvoyer le code"},
+        {"screenId": "60", "keyword_id": 876, "keyword_name": "resendInSeconds", "keyword_value": "Renvoyer dans %ss"},
+        {"screenId": "60", "keyword_id": 877, "keyword_name": "phoneNumberVerified", "keyword_value": "Numéro vérifié"},
+        {"screenId": "60", "keyword_id": 878, "keyword_name": "loginFailedPleaseCheckCredentials", "keyword_value": "Échec de la connexion. Veuillez vérifier vos identifiants."},
+        {"screenId": "60", "keyword_id": 879, "keyword_name": "userIsNotActive", "keyword_value": "L'utilisateur n'est pas actif"},
+        {"screenId": "60", "keyword_id": 893, "keyword_name": "ringMovesAutomatically", "keyword_value": "L'anneau se déplace automatiquement chaque jour du cycle."},
+        {"screenId": "60", "keyword_id": 894, "keyword_name": "cycleStillActive", "keyword_value": "Votre cycle est toujours actif..."},
+        {"screenId": "60", "keyword_id": 895, "keyword_name": "mustPayBeforeSubmittingDate", "keyword_value": "Vous devez payer avant de soumettre une nouvelle date"},
+        {"screenId": "60", "keyword_id": 896, "keyword_name": "anErrorHasOccurred", "keyword_value": "Une erreur s'est produite"},
+        {"screenId": "60", "keyword_id": 897, "keyword_name": "submittingAnswersPleaseWait", "keyword_value": "Envoi de vos réponses, veuillez patienter..."},
+        {"screenId": "60", "keyword_id": 898, "keyword_name": "savingPeriodDatePleaseWait", "keyword_value": "Enregistrement de la date de vos règles, veuillez patienter..."}
       ]
     }
   ]

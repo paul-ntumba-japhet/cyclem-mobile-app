@@ -1,7 +1,7 @@
 import 'package:era_flutter/languageConfiguration/ServerLanguageResponse.dart';
 
-String defaultLanguageCode = "en"; // Set Default language code
-String defaultCountryCode = "en-IN"; // Set Default Language code
+String defaultLanguageCode = "fr"; // Set Default language code
+String defaultCountryCode = "fr-FR"; // Set Default Language code
 String defaultKeyNotFoundValue =
-    "KEY_NOT_FOUND"; // Set your own message if key not found
+    "The French translation is not available for this key."; // Set your own message if key not found
 List<ContentData> defaultLanguageDataKeys = [];

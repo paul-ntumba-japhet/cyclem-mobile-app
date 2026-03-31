@@ -13,6 +13,8 @@ import '../../utils/app_common.dart';
 import '../../utils/app_config.dart';
 import '../../utils/app_images.dart';
 import 'about_us_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_conditions_screen.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -105,12 +107,12 @@ class _AboutScreenState extends State<AboutScreen> {
                           10.height,
                           mSettingOption(language.privacyAndPolicy, ic_secure,
                               () {
-                            launchUrls("$APP_BASE_URL/privacypolicy");
+                            PrivacyPolicyScreen().launch(context);
                           }),
                           10.height,
                           mSettingOption(language.termsAndConditions, ic_docs,
                               () {
-                            launchUrls("$APP_BASE_URL/termofservice");
+                            TermsConditionsScreen().launch(context);
                           }),
                           10.height,
                           mSettingOption(language.rate, ic_star, () {

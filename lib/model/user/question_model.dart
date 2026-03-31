@@ -7,6 +7,11 @@ import '../../utils/app_images.dart';
 class QuestionsModel {
   Step1 step1;
   Step2 step2;
+  Step2Phone step2Phone;
+  Step3PersonalInfo step3PersonalInfo;
+  Step4Question1 step4Question1;
+  Step4Question2 step4Question2;
+  Step4Question3 step4Question3;
   Step3 step3;
   Step4 step4;
   Step5 step5;
@@ -16,6 +21,11 @@ class QuestionsModel {
   QuestionsModel({
     required this.step1,
     required this.step2,
+    required this.step2Phone,
+    required this.step3PersonalInfo,
+    required this.step4Question1,
+    required this.step4Question2,
+    required this.step4Question3,
     required this.step3,
     required this.step4,
     required this.step5,
@@ -27,6 +37,11 @@ class QuestionsModel {
     return QuestionsModel(
       step1: Step1.fromJson(json['step1']),
       step2: Step2.fromJson(json['step2']),
+      step2Phone: Step2Phone.fromJson(json['step2Phone'] ?? {}),
+      step3PersonalInfo: Step3PersonalInfo.fromJson(json['step3PersonalInfo'] ?? {}),
+      step4Question1: Step4Question1.fromJson(json['step4Question1'] ?? {}),
+      step4Question2: Step4Question2.fromJson(json['step4Question2'] ?? {}),
+      step4Question3: Step4Question3.fromJson(json['step4Question3'] ?? {}),
       step3: Step3.fromJson(json['step3']),
       step4: Step4.fromJson(json['step4']),
       step5: Step5.fromJson(json['step5']),
@@ -39,6 +54,11 @@ class QuestionsModel {
     return {
       'step1': step1.toJson(),
       'step2': step2.toJson(),
+      'step2Phone': step2Phone.toJson(),
+      'step3PersonalInfo': step3PersonalInfo.toJson(),
+      'step4Question1': step4Question1.toJson(),
+      'step4Question2': step4Question2.toJson(),
+      'step4Question3': step4Question3.toJson(),
       'step3': step3.toJson(),
       'step4': step4.toJson(),
       'step5': step5.toJson(),
@@ -126,6 +146,154 @@ class Step2 {
       data['options'] = this.options.map((v) => v.toJson()).toList();
     }
     return data;
+  }
+}
+
+class Step2Phone {
+  String? phoneNumber;
+  String? countryCode;
+  String? verificationId;
+  bool? isVerified;
+  String? otpCode;
+
+  Step2Phone({
+    this.phoneNumber,
+    this.countryCode,
+    this.verificationId,
+    this.isVerified = false,
+    this.otpCode,
+  });
+
+  factory Step2Phone.fromJson(Map<String, dynamic> json) {
+    return Step2Phone(
+      phoneNumber: json['phoneNumber'],
+      countryCode: json['countryCode'],
+      verificationId: json['verificationId'],
+      isVerified: json['isVerified'] ?? false,
+      otpCode: json['otpCode'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'phoneNumber': this.phoneNumber,
+      'countryCode': this.countryCode,
+      'verificationId': this.verificationId,
+      'isVerified': this.isVerified,
+      'otpCode': this.otpCode,
+    };
+  }
+}
+
+class Step3PersonalInfo {
+  String? fullName;
+  String? email;
+  bool? isCompleted;
+
+  Step3PersonalInfo({
+    this.fullName,
+    this.email,
+    this.isCompleted = false,
+  });
+
+  factory Step3PersonalInfo.fromJson(Map<String, dynamic> json) {
+    return Step3PersonalInfo(
+      fullName: json['fullName'],
+      email: json['email'],
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'fullName': this.fullName,
+      'email': this.email,
+      'isCompleted': this.isCompleted,
+    };
+  }
+}
+
+class Step4Question1 {
+  String? question;
+  bool? answer; // true for Yes, false for No, null for not answered
+  bool? isCompleted;
+
+  Step4Question1({
+    this.question,
+    this.answer,
+    this.isCompleted = false,
+  });
+
+  factory Step4Question1.fromJson(Map<String, dynamic> json) {
+    return Step4Question1(
+      question: json['question'],
+      answer: json['answer'] == null ? null : json['answer'] as bool,
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': this.question,
+      'answer': this.answer,
+      'isCompleted': this.isCompleted,
+    };
+  }
+}
+
+class Step4Question2 {
+  String? question;
+  bool? answer; // true for Yes, false for No, null for not answered
+  bool? isCompleted;
+
+  Step4Question2({
+    this.question,
+    this.answer,
+    this.isCompleted = false,
+  });
+
+  factory Step4Question2.fromJson(Map<String, dynamic> json) {
+    return Step4Question2(
+      question: json['question'],
+      answer: json['answer'] == null ? null : json['answer'] as bool,
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': this.question,
+      'answer': this.answer,
+      'isCompleted': this.isCompleted,
+    };
+  }
+}
+
+class Step4Question3 {
+  String? question;
+  bool? answer; // true for Yes, false for No, null for not answered
+  bool? isCompleted;
+
+  Step4Question3({
+    this.question,
+    this.answer,
+    this.isCompleted = false,
+  });
+
+  factory Step4Question3.fromJson(Map<String, dynamic> json) {
+    return Step4Question3(
+      question: json['question'],
+      answer: json['answer'] == null ? null : json['answer'] as bool,
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': this.question,
+      'answer': this.answer,
+      'isCompleted': this.isCompleted,
+    };
   }
 }
 
@@ -312,7 +480,7 @@ class Step7 {
   Step7({
     required this.title,
     required this.desc,
-    required this.question1,
+    this.question1,
     required this.question2,
     this.answerToQuestion1,
     this.answerToQuestion2,
@@ -375,7 +543,7 @@ class GoalTypeModel {
 }
 
 Step1 step1 = Step1(
-    title: "${language.areYouUsing} Era ${language.forYourself} ?",
+    title: "${language.areYouUsing} CycleM ${language.forYourself} ?",
     options: ["${language.yesForTracking}. ", "${language.yesAsADoctor}."]);
 // "No, I have partner code."
 Step2 step2 = Step2(
@@ -417,27 +585,62 @@ Step5 step5 = Step5(
     isConfirm: true,
     isSkip: true);
 Step6 step6 = Step6(
-    title: "What is Luteal Phase?",
-    desc:
-        "The luteal phase is the duration between ovulation and the start of your period. Logging its length helps improve the accuracy of ovulation predictions.",
+    title: language.whatIsLutealPhase,
+    desc: language.lutealPhaseDescription,
     lutealLengthList: getLutealLengthList(),
     selectedOption: -1,
     isConfirm: true,
     isSkip: true);
 Step7 step7 = Step7(
-  title: "Complete Your Profile",
-  desc:
-      "Help us personalize your experience by providing some basic information",
-  question1: "What is your full name?",
-  question2: "What year were you born?",
+  title: language.completeYourProfile,
+  desc: language.completeYourProfileDescription,
+  question1: null, // Name is now collected in Step 4 (step3PersonalInfo)
+  question2: language.whatYearWereYouBorn,
   answerToQuestion1: null,
   answerToQuestion2: null,
   confirm: true,
   skip: true,
 );
+Step2Phone step2Phone = Step2Phone(
+  phoneNumber: null,
+  countryCode: "+1",
+  verificationId: null,
+  isVerified: false,
+  otpCode: null,
+);
+
+Step3PersonalInfo step3PersonalInfo = Step3PersonalInfo(
+  fullName: null,
+  email: null,
+  isCompleted: false,
+);
+
+Step4Question1 step4Question1 = Step4Question1(
+  question: language.doYouHavePeriodAlmostEveryMonth,
+  answer: null,
+  isCompleted: false,
+);
+
+Step4Question2 step4Question2 = Step4Question2(
+  question: language.doYouHavePeriodWhenExpected,
+  answer: null,
+  isCompleted: false,
+);
+
+Step4Question3 step4Question3 = Step4Question3(
+  question: language.areYouBreastfeeding,
+  answer: null,
+  isCompleted: false,
+);
+
 QuestionsModel questionsModel = QuestionsModel(
   step1: step1,
   step2: step2,
+  step2Phone: step2Phone,
+  step3PersonalInfo: step3PersonalInfo,
+  step4Question1: step4Question1,
+  step4Question2: step4Question2,
+  step4Question3: step4Question3,
   step3: step3,
   step4: step4,
   step5: step5,

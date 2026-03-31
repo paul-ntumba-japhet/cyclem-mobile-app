@@ -43,6 +43,9 @@ dependencies:
   firebase_crashlytics: ^4.0.3
   firebase_messaging: ^15.2.4
   cloud_firestore: ^5.1.0
+  
+  # Phone Verification
+  pin_code_fields: ^8.0.1
   file_picker: ^8.0.6
   timezone: ^0.10.0
   awesome_notifications: ^0.10.1
@@ -124,6 +127,10 @@ dependencies:
 
 
   facebook_audience_network: any
+  syncfusion_flutter_charts: ^28.2.12
+  flutter_calendar_carousel: ^2.5.4
+  ikchatbot: ^1.0.5
+  flutter_stripe: ^11.1.0
 dependency_overrides:
   flutter_lints: ^4.0.0
   cloud_firestore: ^5.1.0

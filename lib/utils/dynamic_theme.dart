@@ -12,7 +12,7 @@ class ColorUtils {
   static Color? _appButtonColorDark;
   static Color? _dividerColor;
   static Color? _cardDarkColor;
-  ColorUtils({String primaryHex = "#F44087"}) {
+  ColorUtils({String primaryHex = "#A60808"}) { // RGB(166, 8, 8)
     themeColor = colorFromHex(primaryHex);
     _colorPrimary = colorFromHex(primaryHex);
 
@@ -71,7 +71,7 @@ class ColorUtils {
     return Color.fromRGBO(r, g, b, 1.0);
   }
 
-  static Color get colorPrimary => _colorPrimary ?? Color(0xFF573391);
+  static Color get colorPrimary => _colorPrimary ?? Color.fromRGBO(166, 8, 8, 1.0); // RGB(166, 8, 8)
   static Color get colorPrimaryLight => _colorPrimaryLight ?? Color(0xFFF5F5F5);
   static Color get borderColor => _borderColor ?? Color(0xFFEAEAEA);
   static Color get bottomNavigationColor =>

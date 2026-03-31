@@ -389,7 +389,7 @@ Future<bool?> showConfirmDialogCustom(
                           border: Border.all(color: primaryColor!),
                           backgroundColor: bgColor ?? primaryLightColor),
                       child: Image.asset(
-                          image.isEmptyOrNull ? ic_app_logo : image!,
+                          image.isEmptyOrNull ? black_logo : image!,
                           color: iconColor ?? primaryColor,
                           height: 28,
                           width: 28),

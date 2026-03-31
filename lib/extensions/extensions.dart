@@ -7,6 +7,7 @@ export 'constants.dart';
 export 'decorations.dart';
 export 'extension_util/int_extensions.dart';
 export 'extension_util/widget_extensions.dart';
+export 'extension_util/string_extensions.dart';
 export 'text_styles.dart';
 export 'blur_widget.dart';
 export 'confirmation_dialog.dart';

@@ -79,8 +79,8 @@ class ProgressScreenState extends State<ProgressScreen> {
         lastPeriodDate = null;
       }
       instance.updateConfiguration(
-          cycleLength: questionsModelData.step4.selectedOption,
-          periodDuration: questionsModelData.step5.selectedOption,
+          cycleLength: questionsModelData.step4.selectedOption ?? DEFAULT_CYCLE_LENGTH,
+          periodDuration: questionsModelData.step5.selectedOption ?? DEFAULT_PERIOD_LENGTH,
           customerId: userStore.userId.toString(),
           lastPeriodDate: lastPeriodDate);
 
@@ -101,17 +101,16 @@ class ProgressScreenState extends State<ProgressScreen> {
         '${randomLastName.trim().replaceAll(" ", "")}$dateTimeString@nomail.com';
     String randomPassword = generateRandomString(8);
     Map<String, dynamic> map = getJSONAsync(KEY_QUESTION_DATA);
-    final String fullName =
-        questionsModel.step7.answerToQuestion1 ?? "Anonymous";
+    // Use name from Step 4 (step3PersonalInfo) if available, otherwise use Step 7, otherwise "Anonymous"
+    final String fullName = questionsModel.step3PersonalInfo.fullName ?? 
+        questionsModel.step7.answerToQuestion1 ?? 
+        "Anonymous";
     final List<String> nameParts = fullName.trim().split(' ');
     final String firstName =
         nameParts.isNotEmpty ? nameParts.first : "Anonymous";
     final String lastName =
         nameParts.length > 1 ? nameParts.sublist(1).join(' ') : randomLastName;
-    final int age = questionsModel.step7.answerToQuestion2?.isNotEmpty == true
-        ? getCurrentAgeFromYear(
-            int.tryParse(questionsModel.step7.answerToQuestion2!)!)
-        : 0;
+    final int age = 0; // Birth year no longer collected in onboarding
 
     QuestionsModel questionsModelData = QuestionsModel.fromJson(map);
     Map<String, dynamic> req;
@@ -129,8 +128,8 @@ class ProgressScreenState extends State<ProgressScreen> {
           questionsModelData.step3.selectedLastPeriodDate.isEmptyOrNull
               ? getDateTimeString(DateTime.now())
               : questionsModelData.step3.selectedLastPeriodDate.toString(),
-      "cycle_length": questionsModelData.step4.selectedOption,
-      "period_length": questionsModelData.step5.selectedOption,
+      "cycle_length": questionsModelData.step4.selectedOption ?? DEFAULT_CYCLE_LENGTH,
+      "period_length": questionsModelData.step5.selectedOption ?? DEFAULT_PERIOD_LENGTH,
       "luteal_phase": questionsModelData.step6.selectedOption != -1
           ? questionsModelData.step6.selectedOption
           : 0

@@ -1,6 +1,5 @@
 import 'package:era_flutter/extensions/extension_util/context_extensions.dart';
 import 'package:era_flutter/languageConfiguration/LanguageDataConstant.dart';
-import 'package:terminate_restart/terminate_restart.dart';
 import 'package:era_flutter/languageConfiguration/LanguageDefaultJson.dart';
 import 'package:era_flutter/languageConfiguration/ServerLanguageResponse.dart';
 import 'package:flutter/cupertino.dart';
@@ -22,6 +21,67 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class _LanguageScreenState extends State<LanguageScreen> {
+  // Static language list with French and English
+  List<LanguageJsonData> get _staticLanguages {
+    return [
+      LanguageJsonData(
+        id: 1,
+        languageName: 'Français',
+        languageCode: 'fr',
+        countryCode: 'FR',
+        isDefaultLanguage: 1,
+        isRtl: 0,
+      ),
+      LanguageJsonData(
+        id: 2,
+        languageName: 'English',
+        languageCode: 'en',
+        countryCode: 'US',
+        isDefaultLanguage: 0,
+        isRtl: 0,
+      ),
+    ];
+  }
+
+  // Get available languages (server data or static fallback)
+  List<LanguageJsonData> get _availableLanguages {
+    if (defaultServerLanguageData != null && defaultServerLanguageData!.isNotEmpty) {
+      // Filter to only show French and English from server data
+      List<LanguageJsonData> filtered = defaultServerLanguageData!
+          .where((lang) => lang.languageCode == 'fr' || lang.languageCode == 'en')
+          .toList();
+      
+      // If we have both languages from server, use them
+      if (filtered.length >= 2) {
+        return filtered;
+      }
+      
+      // Otherwise, merge with static languages
+      List<LanguageJsonData> result = [];
+      bool hasFrench = filtered.any((lang) => lang.languageCode == 'fr');
+      bool hasEnglish = filtered.any((lang) => lang.languageCode == 'en');
+      
+      // Add French (from server if available, otherwise static)
+      if (hasFrench) {
+        result.add(filtered.firstWhere((lang) => lang.languageCode == 'fr'));
+      } else {
+        result.add(_staticLanguages.firstWhere((lang) => lang.languageCode == 'fr'));
+      }
+      
+      // Add English (from server if available, otherwise static)
+      if (hasEnglish) {
+        result.add(filtered.firstWhere((lang) => lang.languageCode == 'en'));
+      } else {
+        result.add(_staticLanguages.firstWhere((lang) => lang.languageCode == 'en'));
+      }
+      
+      return result;
+    } else {
+      // Use static languages if server data is not available
+      return _staticLanguages;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -80,11 +140,11 @@ class _LanguageScreenState extends State<LanguageScreen> {
                     ),
                   ),
                   child: AnimatedListView(
-                    itemCount: defaultServerLanguageData!.length,
+                    itemCount: _availableLanguages.length,
                     padding: const EdgeInsets.all(16),
                     shrinkWrap: true,
                     itemBuilder: (context, index) {
-                      LanguageJsonData data = defaultServerLanguageData![index];
+                      LanguageJsonData data = _availableLanguages[index];
                       bool isSelected = getStringAsync(
                             SELECTED_LANGUAGE_CODE,
                             defaultValue: defaultLanguageCode,
@@ -93,57 +153,37 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
                       return GestureDetector(
                         onTap: () async {
-                          bool confirm = await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                backgroundColor: Colors.white.withValues(alpha: 0.95),
-                                title: Text(
-                                  language.restartRequired,
-                                  style: boldTextStyle(
-                                      size: 18, color: Colors.black87),
-                                ),
-                                content: Text(
-                                  language.toApplyTheLanguageChanges,
-                                  style: secondaryTextStyle(
-                                      size: 14, color: Colors.black54),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: Text(
-                                      language.cancel,
-                                      style: TextStyle(
-                                          color: Colors.grey.shade600),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: Text(
-                                      language.Confirm,
-                                      style: const TextStyle(color: mainColor),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                          // Store navigator reference and check canPop BEFORE update to avoid deactivated widget error
+                          final navigator = Navigator.of(context);
+                          final canPop = navigator.canPop();
+                          final rootContext = navigatorKey.currentContext;
+                          
+                          // Update language configuration
+                          await updateAppLanguageConfiguration(
+                            data: data,
+                            context: rootContext,
                           );
-
-                          if (confirm) {
-                            await updateAppLanguageConfiguration(
-                                    data: data, context: context)
-                                .whenComplete(
-                              () {
-                                TerminateRestart.instance.restartApp(
-                                  options: const TerminateRestartOptions(
-                                      terminate: true),
-                                );
-                              },
+                          
+                          // Pop immediately using stored navigator reference (don't check context.mounted after update)
+                          if (canPop) {
+                            navigator.pop();
+                          }
+                          
+                          // Wait a bit for the language to load and app to rebuild
+                          await Future.delayed(const Duration(milliseconds: 300));
+                          
+                          // Show success message using root context after navigation
+                          final currentRootContext = navigatorKey.currentContext;
+                          if (currentRootContext != null && currentRootContext.mounted) {
+                            ScaffoldMessenger.of(currentRootContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${language.languages}: ${data.languageName.validate()}',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: mainColor,
+                                duration: const Duration(seconds: 2),
+                              ),
                             );
                           }
                         },

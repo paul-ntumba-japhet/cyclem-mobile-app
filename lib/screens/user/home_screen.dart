@@ -36,6 +36,8 @@ import '../../model/user/dashboard_response.dart';
 import '../../model/user/menstrual_cycle_summary_model.dart' as ms;
 import '../../model/user/user_location_model.dart';
 import '../../model/user/user_models/pregnancy_detail_model.dart';
+import '../../model/user/cycle_info_model.dart';
+import '../../model/user/subscription_info_model.dart';
 import '../../network/chatgpt_network_request.dart';
 import '../../network/rest_api.dart';
 import '../../service/reminder_service.dart';
@@ -47,8 +49,9 @@ import '../widgets/article_recommendation_widget.dart';
 import '../widgets/common_button.dart';
 import '../widgets/cycle_summary_widget.dart';
 import '../widgets/disclaimer_widget.dart';
-import '../widgets/goal_specific_view.dart';
 import '../widgets/insight_display_container_widget.dart';
+import '../widgets/circular_beads_diagram.dart';
+import '../widgets/blog_carousel_widget.dart';
 import 'menstrual_report_screen.dart';
 
 const double kPinkHeight = 450.0;
@@ -131,6 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
     getMenstrualCycleData();
     // configureCrispChat();
     init(isDayClick: false);
+    // Fetch cycle info and subscription info if not available
+    _fetchCycleAndSubscriptionInfoIfNeeded();
     reaction(
       (_) => appStore.isHomeScreenUpdated,
       (updated) async {
@@ -151,6 +156,177 @@ class _HomeScreenState extends State<HomeScreen> {
         getList(), /* updateUserStatus()*/
       ]);
       setState(() {});
+    }
+  }
+
+  /// Fetch cycle info and subscription info if they're not available
+  /// This ensures the data is loaded when the home screen initializes
+  Future<void> _fetchCycleAndSubscriptionInfoIfNeeded() async {
+    try {
+      // Check if data is already available
+      if (checkCycleAndSubscriptionInfoAvailable()) {
+        print('✅ Cycle info and subscription info already available');
+        return;
+      }
+
+      // Check if user is logged in
+      if (!userStore.isLoggedIn) {
+        print('ℹ️ User not logged in - cannot fetch cycle/subscription info');
+        return;
+      }
+
+      // Get phone number from user model
+      String? phoneNumber = userStore.user?.phoneNumber;
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        print('ℹ️ Phone number not available - cannot fetch cycle/subscription info');
+        return;
+      }
+
+      print('📡 Fetching cycle info and subscription info for home screen...');
+      
+      // Fetch cycle info if not available
+      if (userStore.cycleInfo == null) {
+        try {
+          final cycleInfo = await getCycleInfoDirectApi(phoneNumber);
+          await userStore.setCycleInfo(cycleInfo);
+          String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+          await saveCycleInfoForPhone(phoneForAPI, cycleInfo);
+          print('✅ Cycle info fetched and saved successfully');
+          
+          // Schedule cycle stage notifications
+          await scheduleCycleStageNotifications();
+        } catch (e) {
+          print('⚠️ Error fetching cycle info: $e');
+        }
+      } else {
+        // Cycle info already exists, but schedule notifications in case they weren't scheduled before
+        await scheduleCycleStageNotifications();
+      }
+
+      // Fetch subscription info if not available
+      if (userStore.subscriptionInfo == null) {
+        try {
+          final subscriptionInfo = await getSubscriptionInfoApi(phoneNumber);
+          await userStore.setSubscriptionInfo(subscriptionInfo);
+          String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+          await saveSubscriptionInfoForPhone(phoneForAPI, subscriptionInfo);
+          print('✅ Subscription info fetched and saved successfully');
+        } catch (e) {
+          print('⚠️ Error fetching subscription info: $e');
+        }
+      }
+
+      // Update UI if mounted
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('⚠️ Error in _fetchCycleAndSubscriptionInfoIfNeeded: $e');
+    }
+  }
+
+  /// Check if cycle info and subscription info are available
+  /// Returns true if both are available, false otherwise
+  /// Checks userStore first, then falls back to SharedPreferences
+  bool checkCycleAndSubscriptionInfoAvailable() {
+    try {
+      // Check cycle info
+      bool hasCycleInfo = false;
+      if (userStore.cycleInfo != null) {
+        hasCycleInfo = true;
+      } else {
+        // Fall back to SharedPreferences
+        Map<String, dynamic> cycleInfoJson = getJSONAsync(KEY_CYCLE_INFO);
+        if (cycleInfoJson.isNotEmpty) {
+          try {
+            CycleInfoModel.fromJson(cycleInfoJson);
+            hasCycleInfo = true;
+          } catch (e) {
+            print('Error parsing cycle info from SharedPreferences: $e');
+          }
+        }
+      }
+
+      // Check subscription info
+      bool hasSubscriptionInfo = false;
+      if (userStore.subscriptionInfo != null) {
+        hasSubscriptionInfo = true;
+      } else {
+        // Fall back to SharedPreferences
+        Map<String, dynamic> subscriptionInfoJson = getJSONAsync(KEY_SUBSCRIPTION_INFO);
+        if (subscriptionInfoJson.isNotEmpty) {
+          try {
+            SubscriptionInfoModel.fromJson(subscriptionInfoJson);
+            hasSubscriptionInfo = true;
+          } catch (e) {
+            print('Error parsing subscription info from SharedPreferences: $e');
+          }
+        }
+      }
+
+      bool bothAvailable = hasCycleInfo && hasSubscriptionInfo;
+      
+      print('Cycle Info Available: $hasCycleInfo');
+      print('Subscription Info Available: $hasSubscriptionInfo');
+      print('Both Available: $bothAvailable');
+
+      return bothAvailable;
+    } catch (e) {
+      print('Error checking cycle and subscription info availability: $e');
+      return false;
+    }
+  }
+
+  /// Test method to fetch cycle info for current logged-in user
+  Future<void> testGetCycleInfo() async {
+    try {
+      print('=== Testing getCycleInfoDirectApi ===');
+      print('Current user logged in: ${userStore.isLoggedIn}');
+      print('Current user token: ${userStore.token.isNotEmpty ? "Token exists" : "No token"}');
+      
+      if (!userStore.isLoggedIn) {
+        print('ERROR: User is not logged in');
+        return;
+      }
+      
+      // Get phone number from user model
+      String? phoneNumber = userStore.user?.phoneNumber;
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        print('ERROR: Phone number not available');
+        toast(language.phoneNumberNotAvailable);
+        return;
+      }
+      
+      appStore.setLoading(true);
+      print('Calling getCycleInfoDirectApi() with phone: $phoneNumber...');
+      final cycleInfo = await getCycleInfoDirectApi(phoneNumber);
+      
+      print('✅ SUCCESS: Cycle info fetched');
+      print('Cycle Info Data:');
+      //print('  - dateCreation: ${cycleInfo.dateCreation}');
+      //print('  - dateFertiStart: ${cycleInfo.dateFertiStart}');
+      //print('  - dateFertireqEnd: ${cycleInfo.dateFertireqEnd}');
+      //print('  - dateRegle: ${cycleInfo.dateRegle}');
+      //print('  - dateProchaineReglesStart: ${cycleInfo.dateProchaineReglesStart}');
+      //print('  - dateProchaineReglesEnd: ${cycleInfo.dateProchaineReglesEnd}');
+      
+      // Update store
+      await userStore.setCycleInfo(cycleInfo);
+      
+      if (mounted) {
+        setState(() {});
+        toast(language.cycleInfoFetchedSuccessfully);
+      }
+    } catch (e, stackTrace) {
+      print('❌ ERROR: Failed to fetch cycle info');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        toast('Error: ${e.toString()}');
+      }
+    } finally {
+      appStore.setLoading(false);
     }
   }
 
@@ -731,84 +907,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNoDataView() {
-    return IntrinsicHeight(
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(defaultRadius),
-          ),
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                ic_woman_with_flower,
-                width: 100,
-                height: 100,
-                fit: BoxFit.contain,
-              ),
-              16.height,
-              Text(
-                language.noSataAvailableToGenerateYourGraph,
-                textAlign: TextAlign.center,
-                style: boldTextStyle(
-                  weight: FontWeight.w500,
-                  size: textFontSize_16,
-                ),
-              ),
-              16.height,
-              CustomListTile(
-                icon: Icons.check,
-                normalText1: language.pleaseLogYourData,
-                boldText: "",
-                normalText2: language.toGenerateDetailedGraphs,
-              ),
-              16.height,
-              Container(
-                height: 45,
-                decoration: BoxDecoration(
-                  color: ColorUtils.colorPrimary,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      language.logPreviousCycle,
-                      style: boldTextStyle(
-                        color: Colors.white,
-                        isHeader: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ).center().onTap(() {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => MenstrualCycleMonthlyCalenderView(
-                      themeColor: Colors.black,
-                      isShowCloseIcon: true,
-                      onDataChanged: (value) {
-                        if (value) {
-                          DashboardScreen(currentIndex: 0)
-                              .launch(context, isNewTask: true);
-                        }
-                      },
-                    ),
-                  ),
-                );
-                // PushReplacement Dashboard();
-              }),
-            ],
-          ),
-        ),
-      ),
-    ).center();
+    return const SizedBox.shrink();
   }
 
   @override
@@ -832,7 +931,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
       floatingActionButton: isCrispChatEnabled != null && isCrispChatEnabled!
           ? FloatingActionButton(
               onPressed: () async {
@@ -849,1260 +948,21 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            backgroundColor: mainColorLight,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            title: Text(
-              language.todayActivity,
-              style: boldTextStyle(
-                color: mainColorText,
-                size: 18,
-                weight: FontWeight.w500,
-              ),
-            ),
-            expandedHeight: 0,
-            // No extra height needed
-            elevation: 0,
-            surfaceTintColor: mainColorLight,
-            // Prevent tint changes
-            forceElevated: true,
-            actions: [
-              SizedBox(
-                child: Image.asset(chat_bot, width: 30, height: 30)
-                    .visible(isChatgptEnabled != null &&
-                        isChatgptEnabled! &&
-                        chatgptKey != null &&
-                        chatgptKey!.isNotEmpty)
-                    .onTap(() {
-                  AiDashboardScreen().launch(context);
-                }),
-              ).paddingOnly(right: 10)
-            ],
-          ),
           SliverList(
             delegate: SliverChildListDelegate([
-              Column(
-                children: [
-                  Container(
-                    height: kPinkHeight + 10,
-                    color: mainColorLight,
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: kCircleTopMargin,
-                          left: 0,
-                          right: 0,
-                          bottom: 5,
-                          child: Center(
-                            child: Column(
-                              children: [
-                                // Circle
-                                GoalSpecificView(
-                                  key: _key,
-                                  goalIndex: getIntAsync(GOAL),
-                                  isDayClick: isDayClick,
-                                  cycleDay: cycleDay,
-                                  pregnancyImageUrl: pregnancyImageUrl,
-                                  onDaySelected: (selectedDay) => null,
-                                  viewKey: _key,
-                                ),
-                                32.height,
-                                // Log Period
-                                IntrinsicWidth(
-                                  child: CommonActionButton(
-                                    text: language.logPeriod,
-                                    icon: Icons.info_outline,
-                                    width: 158,
-                                    backgroundColor: mainColor,
-                                    textColor: mainWhite,
-                                    isVisible: getIntAsync(GOAL) == 0,
-                                    onTap: () {
-                                      showAdBeforeNavigation(
-                                        context: context,
-                                        screen:
-                                            MenstrualCycleMonthlyCalenderView(
-                                          themeColor: Colors.black,
-                                          isShowCloseIcon: true,
-                                          onDataChanged: (value) {
-                                            if (value) {
-                                              logAnalyticsEvent(
-                                                  category: "period",
-                                                  action: "logged");
-                                            }
-                                          },
-                                        ),
-                                        postAction: () async {
-                                          updateRemindersForDateChange();
-                                          setState(() {
-                                            _key = UniqueKey();
-                                          });
-                                          init(isDayClick: false);
-                                        },
-                                        showAd: (appStore.adsConfig
-                                                    ?.adsconfigAccess ??
-                                                false) &&
-                                            (appStore.showAdsBasedOnConfig
-                                                    ?.editPeriodData ??
-                                                false),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                IntrinsicWidth(
-                                  child: CommonActionButton(
-                                    text: language.details,
-                                    icon: Icons.info_outline,
-                                    width: 130,
-                                    backgroundColor: ColorUtils.colorPrimary,
-                                    textColor: Colors.white,
-                                    isVisible: getIntAsync(GOAL) == 1,
-                                    onTap: () {
-                                      PregnancyDetailScreen(
-                                              weekNumber: weekNumber!,
-                                              data: mPregnancyData)
-                                          .launch(context);
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  appStore.isLoading
-                      ? Center(child: Loader()).paddingSymmetric(vertical: 8)
-                      : Transform.translate(
-                          offset: Offset(0, -20),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: mainBgLightGrey,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(20),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Center(
-                                  child: Container(
-                                    width: 46,
-                                    height: 4,
-                                    margin:
-                                        const EdgeInsets.symmetric(vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                ),
-                                if (areAllDataEmpty()) ...[
-                                  10.height,
-                                  _buildNoDataView()
-                                ] else ...[
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        language.babyCountdown,
-                                        style: boldTextStyle(
-                                          size: textFontSize_16,
-                                          color: mainColorText,
-                                          weight: FontWeight.w500,
-                                        ),
-                                      ).paddingOnly(
-                                          left: 10, bottom: 0, top: 10),
-                                      CountdownWidget(
-                                        isVisible:
-                                            appStore.isLoading == false &&
-                                                getIntAsync(GOAL) == 1,
-                                        expectedDueDate: expectedDueDate,
-                                        formatDateToDayFirst:
-                                            formattedDateToDayFirst,
-                                        daysUntilDueDate: daysUntilDueDate,
-                                      ).paddingSymmetric(vertical: 10),
-                                    ],
-                                  ).visible(appStore.isLoading == false &&
-                                      getIntAsync(GOAL) == 1),
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          cycleDay! == 0
-                                              ? language.Highlights
-                                              : language.dailyTipsForYou,
-                                          style: boldTextStyle(
-                                            size: textFontSize_16,
-                                            color: mainColorText,
-                                            weight: FontWeight.w500,
-                                          ),
-                                        )
-                                            .paddingOnly(left: 10, bottom: 10)
-                                            .visible(combinedList.isNotEmpty),
-                                        SizedBox(
-                                          height: kInsightHeight,
-                                          width: double.infinity,
-                                          child: HorizontalList(
-                                            physics: BouncingScrollPhysics(),
-                                            itemCount: combinedList.length,
-                                            padding: cycleDaysList.isNotEmpty
-                                                ? EdgeInsets.zero
-                                                : EdgeInsets.only(left: 16),
-                                            spacing: 3,
-                                            itemBuilder: (context, index) {
-                                              // Case 1: Render cycleDaysList items
-                                              final combinedItem =
-                                                  combinedList[index];
-
-                                              // Case 1: CycleDateDay item
-                                              if (combinedItem.item
-                                                  is CycleDateDay) {
-                                                final insight = combinedItem
-                                                    .item as CycleDateDay;
-                                                return InsightDisplayContainers(
-                                                  title: insight.title,
-                                                  image: insight.thumbnailImage,
-                                                  onTap: () {
-                                                    final viewType =
-                                                        insight.viewType;
-
-                                                    if (viewType ==
-                                                        STORY_VIEW) {
-                                                      if (insight.storyImage
-                                                              ?.isNotEmpty ??
-                                                          false) {
-                                                        urls = insight
-                                                            .storyImage!
-                                                            .map((story) =>
-                                                                story.url ?? "")
-                                                            .toList();
-                                                        StoryPage(
-                                                          imageUrls: urls,
-                                                          article:
-                                                              insight.article,
-                                                        ).launch(context);
-                                                      } else {
-                                                        urls = [];
-                                                      }
-                                                    } else if (viewType ==
-                                                        VIDEO) {
-                                                      final video =
-                                                          insight.videoData;
-                                                      VideoPlayerScreen(
-                                                              thumbnail: video,
-                                                              url: video)
-                                                          .launch(context);
-                                                    } else if (viewType ==
-                                                        VIDEO_COURSE) {
-                                                      final imageAndVideo = [
-                                                        if (insight
-                                                                .imageVideoImage
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .imageVideoImage!,
-                                                        if (insight
-                                                                .videoImageVideo
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .videoImageVideo!,
-                                                      ];
-                                                      if (imageAndVideo
-                                                          .isNotEmpty) {
-                                                        StoryPage(
-                                                                imageUrls:
-                                                                    imageAndVideo)
-                                                            .launch(context);
-                                                      }
-                                                    } else if (viewType ==
-                                                        CATEGORIES) {
-                                                      // Construct CategoryData
-                                                      CategoryData cat =
-                                                          CategoryData(
-                                                        id: insight
-                                                            .categoryData!.id,
-                                                        title: insight
-                                                            .categoryData!
-                                                            .title,
-                                                      );
-                                                      CategoryDetailsScreen(cat)
-                                                          .launch(context);
-                                                    } else if (viewType ==
-                                                        PODCAST) {
-                                                      SubSectionData data =
-                                                          SubSectionData(
-                                                        sectionDataPodcast:
-                                                            insight
-                                                                .podcastSection,
-                                                        sectionDataImage:
-                                                            insight
-                                                                .thumbnailImage,
-                                                        title: insight.title,
-                                                      );
-                                                      PodcastScreen(data)
-                                                          .launch(context);
-                                                    } else if (viewType ==
-                                                        INSIGHT_TEXT) {
-                                                      StoryPage(
-                                                        imageUrls: [],
-                                                        article:
-                                                            insight.article,
-                                                        challengeData: insight
-                                                            .cycleDateData,
-                                                        cycleDay:
-                                                            cycleDay.toString(),
-                                                        insightData: [],
-                                                      ).launch(context);
-                                                    } else if (viewType ==
-                                                        BLOG_COURSE) {
-                                                      Article data =
-                                                          insight.article!;
-                                                      BlogDetailScreen(
-                                                        article: data,
-                                                        onBookmarkUpdated:
-                                                            (Article) {},
-                                                      ).launch(context);
-                                                    } else if (viewType ==
-                                                        QUESTION_ANSWER) {
-                                                      StoryPage(
-                                                        imageUrls: [],
-                                                        article:
-                                                            insight.article,
-                                                        challengeData: insight
-                                                            .cycleDateData,
-                                                        cycleDay:
-                                                            cycleDay.toString(),
-                                                        insightData: [],
-                                                      ).launch(context);
-                                                    }
-                                                  },
-                                                ).paddingOnly(
-                                                    left: 8, right: 4);
-                                              }
-                                              // Adjust the index for combinedList
-                                              final adjustedIndex =
-                                                  cycleDaysList.isNotEmpty
-                                                      ? index - 1
-                                                      : index;
-
-                                              if (combinedItem.isInsight &&
-                                                  combinedItem.item
-                                                      is Insights) {
-                                                final insight = combinedItem
-                                                    .item as Insights;
-
-                                                return InsightDisplayContainers(
-                                                  image: insight.thumbnailImage,
-                                                  onTap: () {
-                                                    final viewType =
-                                                        insight.viewType;
-                                                    if (viewType ==
-                                                        STORY_VIEW) {
-                                                      if (insight.storyImage
-                                                              ?.isNotEmpty ??
-                                                          false) {
-                                                        urls = insight
-                                                            .storyImage!
-                                                            .map((story) =>
-                                                                story.url ?? "")
-                                                            .toList();
-                                                        StoryPage(
-                                                          imageUrls: urls,
-                                                          article:
-                                                              insight.article,
-                                                        ).launch(context);
-                                                      } else {
-                                                        urls = [];
-                                                      }
-                                                    } else if (viewType ==
-                                                        INSIGHT_TEXT) {
-                                                      StoryPage(
-                                                        imageUrls: [],
-                                                        article:
-                                                            insight.article,
-                                                        insightData:
-                                                            insight.insightData,
-                                                      ).launch(context);
-                                                    } else if (viewType ==
-                                                        VIDEO) {
-                                                      final video =
-                                                          insight.videoData;
-                                                      final youtubeURL =
-                                                          insight.url;
-                                                      (youtubeURL != null &&
-                                                              validateYouTubeUrl(
-                                                                  youtubeURL))
-                                                          ? YoutubeVideoScreen(
-                                                                  url:
-                                                                      youtubeURL)
-                                                              .launch(context)
-                                                          : VideoPlayerScreen(
-                                                                  thumbnail:
-                                                                      video,
-                                                                  url: video)
-                                                              .launch(context);
-                                                    } else if (viewType ==
-                                                        VIDEO_COURSE) {
-                                                      final insight = mInsights[
-                                                          adjustedIndex];
-                                                      final imageAndVideo = [
-                                                        if (insight
-                                                                .imageVideoImage
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .imageVideoImage!,
-                                                        if (insight
-                                                                .videoImageVideo
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .videoImageVideo!,
-                                                      ];
-                                                      if (imageAndVideo
-                                                          .isNotEmpty) {
-                                                        StoryPage(
-                                                                imageUrls:
-                                                                    imageAndVideo)
-                                                            .launch(context);
-                                                      }
-                                                    } else if (viewType ==
-                                                        CATEGORIES) {
-                                                      // Construct CategoryData
-                                                      CategoryData cat =
-                                                          CategoryData(
-                                                        id: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryId,
-                                                        title: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryName,
-                                                      );
-                                                      CategoryDetailsScreen(cat)
-                                                          .launch(context);
-                                                    }
-                                                  },
-                                                ).paddingOnly(left: 4);
-                                              } else if (combinedItem.item
-                                                  is ChatGptInsight) {
-                                                final chatGptInsight =
-                                                    combinedItem.item
-                                                        as ChatGptInsight;
-                                                if (userStore.user!.goalType ==
-                                                    0) {
-                                                  return ChatGptInsightCycleView(
-                                                    cycleDay: cycleDay!,
-                                                    insight: chatGptInsight,
-                                                  ).paddingRight(4);
-                                                } else {
-                                                  return ChatGptInsightPregnancyView(
-                                                    pregnancyWeek: weekNumber!,
-                                                    insight: chatGptInsight,
-                                                  ).paddingRight(4);
-                                                }
-                                              } else if (combinedItem.item
-                                                  is InsightPregnancyWeek) {
-                                                final insightPregnancyData =
-                                                    combinedItem.item
-                                                        as InsightPregnancyWeek;
-
-                                                return InsightDisplayContainers(
-                                                  image: insightPregnancyData
-                                                      .thumbnailImage,
-                                                  onTap: () {
-                                                    final viewType =
-                                                        insightPregnancyData
-                                                            .viewType;
-                                                    if (viewType ==
-                                                        STORY_VIEW) {
-                                                      if (insightPregnancyData
-                                                              .storyImage
-                                                              ?.isNotEmpty ??
-                                                          false) {
-                                                        urls =
-                                                            insightPregnancyData
-                                                                .storyImage!
-                                                                .map((story) =>
-                                                                    story.url ??
-                                                                    "")
-                                                                .toList();
-
-                                                        StoryPage(
-                                                          imageUrls: urls,
-                                                          article:
-                                                              insightPregnancyData
-                                                                  .article,
-                                                        ).launch(context);
-                                                      } else {
-                                                        urls = [];
-                                                      }
-                                                    } else if (viewType ==
-                                                        VIDEO) {
-                                                      final video =
-                                                          insightPregnancyData
-                                                              .videoData;
-                                                      // final youtubeURL = insightPregnancyData.url;
-                                                      final youtubeURL = null;
-
-                                                      (youtubeURL != null &&
-                                                              validateYouTubeUrl(
-                                                                  youtubeURL))
-                                                          ? YoutubeVideoScreen(
-                                                                  url:
-                                                                      youtubeURL)
-                                                              .launch(context)
-                                                          : VideoPlayerScreen(
-                                                                  thumbnail:
-                                                                      video,
-                                                                  url: video)
-                                                              .launch(context);
-                                                    } else if (viewType ==
-                                                        VIDEO_COURSE) {
-                                                      final insight = mInsights[
-                                                          adjustedIndex];
-                                                      final imageAndVideo = [
-                                                        if (insight
-                                                                .imageVideoImage
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .imageVideoImage!,
-                                                        if (insight
-                                                                .videoImageVideo
-                                                                ?.isNotEmpty ??
-                                                            false)
-                                                          insight
-                                                              .videoImageVideo!,
-                                                      ];
-
-                                                      if (imageAndVideo
-                                                          .isNotEmpty) {
-                                                        StoryPage(
-                                                                imageUrls:
-                                                                    imageAndVideo)
-                                                            .launch(context);
-                                                      }
-                                                    } else if (viewType ==
-                                                        CATEGORIES) {
-                                                      // Construct CategoryData
-                                                      CategoryData cat =
-                                                          CategoryData(
-                                                        id: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryId,
-                                                        title: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryName,
-                                                      );
-                                                      CategoryDetailsScreen(cat)
-                                                          .launch(context);
-                                                    }
-                                                  },
-                                                ).paddingRight(4);
-                                              } else if (combinedItem.item
-                                                  is PregnancyData) {
-                                                final pregnancyData =
-                                                    combinedItem.item
-                                                        as PregnancyData;
-                                                return InsightDisplayContainers(
-                                                    image: pregnancyData
-                                                        .pregnancyDateImage,
-                                                    onTap: () {
-                                                      if (pregnancyData
-                                                              .article !=
-                                                          null) {
-                                                        Article article =
-                                                            pregnancyData
-                                                                .article!;
-                                                        BlogDetailScreen(
-                                                          article: article,
-                                                          onBookmarkUpdated:
-                                                              (updatedArticle) {
-                                                            setState(() {
-                                                              mArticles[index] =
-                                                                  updatedArticle;
-                                                            });
-                                                          },
-                                                          title: article.name,
-                                                          fromHome: true,
-                                                        ).launch(context);
-                                                      }
-                                                    }).paddingRight(4);
-                                              } else if (combinedItem.item
-                                                  is PersonalisedInsight) {
-                                                final personalizedData =
-                                                    combinedItem.item
-                                                        as PersonalisedInsight;
-
-                                                return InsightDisplayContainers(
-                                                  image: personalizedData
-                                                      .thumbnailImage,
-                                                  onTap: () {
-                                                    final viewType =
-                                                        personalizedData
-                                                            .viewType;
-                                                    if (viewType ==
-                                                        STORY_VIEW) {
-                                                      if (personalizedData
-                                                          .storyImage
-                                                          .isNotEmpty) {
-                                                        urls = personalizedData
-                                                            .storyImage
-                                                            .map((story) =>
-                                                                story.url ?? "")
-                                                            .toList();
-
-                                                        StoryPage(
-                                                          imageUrls: urls,
-                                                          article:
-                                                              personalizedData
-                                                                  .article,
-                                                        ).launch(context);
-                                                      } else {
-                                                        urls = [];
-                                                      }
-                                                    } else if (viewType ==
-                                                        VIDEO) {
-                                                      final video =
-                                                          personalizedData
-                                                              .videoData;
-                                                      final youtubeURL =
-                                                          personalizedData.url;
-
-                                                      (youtubeURL != null &&
-                                                              validateYouTubeUrl(
-                                                                  youtubeURL))
-                                                          ? YoutubeVideoScreen(
-                                                                  url:
-                                                                      youtubeURL)
-                                                              .launch(context)
-                                                          : VideoPlayerScreen(
-                                                                  thumbnail:
-                                                                      video,
-                                                                  url: video)
-                                                              .launch(context);
-                                                    } else if (viewType ==
-                                                        VIDEO_COURSE) {
-                                                      final imageAndVideo = [
-                                                        if (personalizedData
-                                                            .imageVideoImage
-                                                            .isNotEmpty)
-                                                          personalizedData
-                                                              .imageVideoImage,
-                                                        if (personalizedData
-                                                            .videoImageVideo
-                                                            .isNotEmpty)
-                                                          personalizedData
-                                                              .videoImageVideo,
-                                                      ];
-
-                                                      if (imageAndVideo
-                                                          .isNotEmpty) {
-                                                        StoryPage(
-                                                                imageUrls:
-                                                                    imageAndVideo)
-                                                            .launch(context);
-                                                      }
-                                                    } else if (viewType ==
-                                                        CATEGORIES) {
-                                                      // Construct CategoryData
-                                                      CategoryData cat =
-                                                          CategoryData(
-                                                        id: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryId,
-                                                        title: mInsights[
-                                                                adjustedIndex]
-                                                            .categoryName,
-                                                      );
-                                                      CategoryDetailsScreen(cat)
-                                                          .launch(context);
-                                                    }
-                                                  },
-                                                ).paddingRight(4);
-                                              } else {
-                                                return SizedBox.shrink();
-                                              }
-                                            },
-                                          ),
-                                        ).visible(combinedList.isNotEmpty),
-                                        if (onlyCombinedListHasData()) ...[
-                                          _buildNoDataView()
-                                              .paddingOnly(left: 8, top: 16)
-                                        ] else ...[
-                                          20.height.visible(
-                                              dailyInsights.isNotEmpty),
-                                          Text(
-                                            language.topTipsForYou
-                                                .capitalizeWords(),
-                                            style: boldTextStyle(
-                                              size: textFontSize_16,
-                                              color: mainColorText,
-                                              weight: FontWeight.w500,
-                                            ),
-                                          )
-                                              .paddingOnly(left: 10, bottom: 10)
-                                              .visible(
-                                                  dailyInsights.isNotEmpty),
-                                          SingleChildScrollView(
-                                              scrollDirection: Axis.horizontal,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 6),
-                                              child: IntrinsicHeight(
-                                                child: Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: dailyInsights
-                                                      .asMap()
-                                                      .entries
-                                                      .map((tip) {
-                                                    return Container(
-                                                      constraints:
-                                                          const BoxConstraints(
-                                                              minWidth: 200,
-                                                              maxWidth: 250),
-                                                      margin:
-                                                          const EdgeInsets.only(
-                                                              right: 12),
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      decoration: BoxDecoration(
-                                                        color: [
-                                                          Color(0xFFFED8E0),
-                                                          Color(0xFFD9ECF5),
-                                                          Color(0xFFE5DEF2),
-                                                          Color(0xFFFAE8E9),
-                                                          Color(0xFFFBEEC8),
-                                                        ][tip.key % 5],
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                defaultRadius),
-                                                      ),
-                                                      child: Text(
-                                                        tip.value.title!,
-                                                        style:
-                                                            primaryTextStyle(),
-                                                      ),
-                                                    );
-                                                  }).toList(),
-                                                ),
-                                              )).visible(dailyInsights.isNotEmpty),
-                                          20
-                                              .height
-                                              .visible(mArticles.isNotEmpty),
-                                          Container(
-                                            padding: const EdgeInsets.only(
-                                                top: 10, left: 16, bottom: 10),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                // Horizontal scroll list
-                                                ArticlesRecommendationWidget(
-                                                  encData: encData,
-                                                  currentPhase: currentPhase!,
-                                                  articles: mArticles,
-                                                  cycleDay: cycleDay ?? 0,
-                                                  trimester: currentTrimester,
-                                                  week: weekNumber ?? 0,
-                                                  boldTextStyle: boldTextStyle(
-                                                      size: textFontSize_16,
-                                                      color: mainColorText,
-                                                      weight: FontWeight.w500),
-                                                  primaryTextStyle:
-                                                      primaryTextStyle(),
-                                                  defaultRadius: defaultRadius,
-                                                  isLoading: appStore.isLoading,
-                                                  onArticleUpdated:
-                                                      (updatedArticle, index) {
-                                                    setState(() {
-                                                      mArticles[index] =
-                                                          updatedArticle;
-                                                    });
-                                                  },
-                                                ),
-                                                //const SizedBox(height: 10),
-                                              ],
-                                            ),
-                                          ).visible(mArticles.isNotEmpty),
-                                          20.height.visible(
-                                              predictionTodaySymptomsText
-                                                  .isNotEmpty),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: mainWhite,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      defaultRadius),
-                                            ),
-                                            child: Stack(
-                                              // Add Stack as the root child
-                                              children: [
-                                                Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: [
-                                                    // Title
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              left: 16,
-                                                              top: 16),
-                                                      child: Text(
-                                                        language
-                                                            .todayPredictedSymptoms,
-                                                        style: boldTextStyle(
-                                                            size:
-                                                                textFontSize_16,
-                                                            color:
-                                                                mainColorText,
-                                                            weight: FontWeight
-                                                                .w500),
-                                                      ),
-                                                    ),
-                                                    // Main content
-                                                    Padding(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 16),
-                                                      child: Column(
-                                                        children: List.generate(
-                                                          _showAllItems
-                                                              ? predictionTodaySymptomsText
-                                                                  .length
-                                                              : min(
-                                                                  predictionTodaySymptomsText
-                                                                      .length,
-                                                                  _maxVisibleItems),
-                                                          (index) => Column(
-                                                            children: [
-                                                              if (index > 0)
-                                                                Divider(
-                                                                  height: 1,
-                                                                  thickness: 1,
-                                                                  color:
-                                                                      mainColorStroke,
-                                                                ),
-                                                              Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .symmetric(
-                                                                        vertical:
-                                                                            12),
-                                                                child: Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .spaceBetween,
-                                                                  children: [
-                                                                    Text(
-                                                                      predictionTodaySymptomsText[
-                                                                              index]
-                                                                          .name!,
-                                                                      style:
-                                                                          primaryTextStyle(
-                                                                        size:
-                                                                            textFontSize_14,
-                                                                        weight:
-                                                                            FontWeight.w400,
-                                                                        color:
-                                                                            mainColorBodyText,
-                                                                      ),
-                                                                    ),
-                                                                    Text(
-                                                                      "${predictionTodaySymptomsText[index].accuracy}%",
-                                                                      style:
-                                                                          primaryTextStyle(
-                                                                        size:
-                                                                            textFontSize_14,
-                                                                        weight:
-                                                                            FontWeight.w500,
-                                                                        color:
-                                                                            mainColorText,
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (predictionTodaySymptomsText
-                                                            .length >
-                                                        _maxVisibleItems)
-                                                      Container(
-                                                        height: 48,
-                                                        // Increased to accommodate padding and content
-                                                        decoration:
-                                                            const BoxDecoration(
-                                                          borderRadius:
-                                                              BorderRadius.only(
-                                                            bottomLeft:
-                                                                Radius.circular(
-                                                                    8),
-                                                            bottomRight:
-                                                                Radius.circular(
-                                                                    8),
-                                                          ),
-                                                          color: mainColorLight,
-                                                        ),
-                                                        child: TextButton(
-                                                          onPressed: () {
-                                                            setState(() {
-                                                              _showAllItems =
-                                                                  !_showAllItems;
-                                                            });
-                                                          },
-                                                          style: TextButton
-                                                              .styleFrom(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        16,
-                                                                    vertical:
-                                                                        12),
-                                                            shape:
-                                                                RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          0),
-                                                            ),
-                                                            minimumSize: const Size(
-                                                                0,
-                                                                0), // Prevent default min size constraints
-                                                          ),
-                                                          child: Row(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .center,
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            // Shrink-wrap the Row
-                                                            children: [
-                                                              Text(
-                                                                _showAllItems
-                                                                    ? language
-                                                                        .less
-                                                                    : language
-                                                                        .more,
-                                                                style:
-                                                                    boldTextStyle(
-                                                                  size: 14,
-                                                                  weight:
-                                                                      FontWeight
-                                                                          .w400,
-                                                                  color:
-                                                                      mainColor,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 4),
-                                                              // Space between text and icon
-                                                              Icon(
-                                                                _showAllItems
-                                                                    ? Icons
-                                                                        .keyboard_arrow_up
-                                                                    : Icons
-                                                                        .keyboard_arrow_down,
-                                                                color: ColorUtils
-                                                                    .colorPrimary,
-                                                                size: 20,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ).visible(
-                                              userStore.user!.goalType == 0 &&
-                                                  predictionTodaySymptomsText
-                                                      .isNotEmpty),
-                                          20.height.visible(summaryData
-                                                  ?.predictedSymptomsPatternToday !=
-                                              null),
-                                          // My Cycle
-                                          CycleSummaryWidget(
-                                            summaryData: summaryData,
-                                            boldTextStyle: boldTextStyle(
-                                                size: textFontSize_16,
-                                                color: mainColorText,
-                                                weight: FontWeight.w500),
-                                            primaryTextStyle: boldTextStyle(
-                                                size: textFontSize_14,
-                                                color: mainColorBodyText,
-                                                weight: FontWeight.w400),
-                                            defaultRadius: defaultRadius,
-                                            isVisible: userStore.goalIndex == 0,
-                                            formatDateToWordFormat:
-                                                formatDateToWordFormat,
-                                            onEditCompleted: () {
-                                              updateRemindersForDateChange();
-                                              setState(() {
-                                                _key = UniqueKey();
-                                              });
-                                              init(isDayClick: false);
-                                            },
-                                          ).visible(summaryData != null),
-                                          20.height.visible(
-                                              userStore.user!.goalType == 0 &&
-                                                  summaryData?.predictionMatrix
-                                                          ?.nextPeriodDay !=
-                                                      null),
-
-                                          _buildGraphPlaceholder(
-                                            headerTitle: language.cycleTrends,
-                                            isVisible: hasCycleTrend,
-                                            isGraphInSubscription: false,
-                                            graphWidget:
-                                                MenstrualCycleTrendsGraph(
-                                              isShowMoreOptions: false,
-                                              isShowXAxisTitle: true,
-                                              isShowHeader: false,
-                                              isShowSeriesColor: true,
-                                              onPdfDownloadCallback: () {},
-                                              isShowYAxisTitle: true,
-                                              headerTitleTextStyle:
-                                                  boldTextStyle(
-                                                      size: textFontSize_18,
-                                                      color: scaffoldDarkColor,
-                                                      isHeader: true),
-                                            ),
-                                          ),
-                                          20
-                                              .height
-                                              .visible(hasEstrogenProgesterone),
-                                          _buildGraphPlaceholder(
-                                            headerTitle:
-                                                language.EstrogenProgesterone,
-                                            isGraphInSubscription: false,
-                                            isVisible: hasEstrogenProgesterone,
-                                            graphWidget:
-                                                EstrogenProgesteroneGraph()
-                                                    .paddingSymmetric(
-                                                        horizontal: 16),
-                                          ),
-                                          20.height.visible(hasCyclePeriod),
-                                          _buildGraphPlaceholder(
-                                            headerTitle: language.cyclePeriod,
-                                            isGraphInSubscription: false,
-                                            isVisible: hasCyclePeriod,
-                                            graphWidget:
-                                                MenstrualCyclePeriodsGraph(
-                                              isShowXAxisTitle: true,
-                                              isShowYAxisTitle: true,
-                                            ),
-                                          ),
-                                          20.height.visible(
-                                              lastPeriodDateToUpdate != null &&
-                                                  !lastPeriodDateToUpdate!
-                                                      .isAtSameMomentAs(
-                                                          DateTime(
-                                                              1971, 1, 1))),
-                                          Container(
-                                            padding: EdgeInsets.only(left: 16),
-                                            height: kToolbarHeight +
-                                                MediaQuery.of(context)
-                                                    .padding
-                                                    .top,
-                                            width: double.infinity,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      defaultRadius),
-                                              color: Colors.white,
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                // Expanded text column
-                                                Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      "${language.ReportForADoctor} ❤️",
-                                                      style: boldTextStyle(
-                                                          size: textFontSize_16,
-                                                          color:
-                                                              textPrimaryColor),
-                                                    ),
-                                                    4.height,
-                                                    Text(
-                                                      language
-                                                          .ShareYourSymptoms,
-                                                      style: primaryTextStyle(
-                                                          size: textFontSize_14,
-                                                          color: Colors.grey),
-                                                      maxLines: 2,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ).expand(),
-                                                Image.asset(
-                                                  ic_nurse,
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                              .visible(lastPeriodDateToUpdate !=
-                                                      null &&
-                                                  !lastPeriodDateToUpdate!
-                                                      .isAtSameMomentAs(
-                                                          DateTime(1971, 1, 1)))
-                                              .onTap(() {
-                                            showAdBeforeNavigation(
-                                                context: context,
-                                                showAd: (appStore.adsConfig
-                                                            ?.adsconfigAccess ??
-                                                        false) &&
-                                                    (appStore
-                                                            .showAdsBasedOnConfig
-                                                            ?.downloadDoctorReport ??
-                                                        false),
-                                                postAction: () async {},
-                                                screen:
-                                                    MenstrualReportScreen());
-                                          }),
-
-                                          20.height.visible(hasCycleHistory),
-                                          _buildGraphPlaceholder(
-                                            headerTitle: "",
-                                            isCycleHistory: true,
-                                            isGraphInSubscription: false,
-                                            isVisible: hasCycleHistory,
-                                            graphWidget:
-                                                MenstrualCycleHistoryGraph(
-                                              iconColor: Colors.black,
-                                              appBarBackgroundColor:
-                                                  mainColorLight,
-                                              headerTitleTextStyle:
-                                                  boldTextStyle(
-                                                      size: textFontSize_16,
-                                                      color: mainColorText,
-                                                      weight: FontWeight.w500),
-                                            ).paddingSymmetric(horizontal: 16),
-                                          ),
-
-                                          20.height.visible(
-                                              mAskQuestionsData.isNotEmpty),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            padding: const EdgeInsets.all(16),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  language.yourQuestions,
-                                                  style: boldTextStyle(
-                                                      size: textFontSize_16,
-                                                      color: mainColorText,
-                                                      weight: FontWeight.w500),
-                                                ),
-                                                10.height,
-                                                Divider(
-                                                  height:
-                                                      1, // Keeps divider itself tight
-                                                  thickness: 1,
-                                                  color: Colors.grey[300],
-                                                ),
-                                                AnimatedListView(
-                                                  shrinkWrap: true,
-                                                  itemCount:
-                                                      mAskQuestionsData.length,
-                                                  padding:
-                                                      EdgeInsets.only(top: 8),
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    final singleData =
-                                                        mAskQuestionsData[
-                                                            index];
-                                                    return _buildQuestionAnswerItem(
-                                                        ansOnDoctor:
-                                                            formatDateToTimezone(
-                                                                dateString: singleData
-                                                                    .updatedAt
-                                                                    .toString()),
-                                                        askedOn: formatDateToTimezone(
-                                                            dateString: singleData
-                                                                .createdAt
-                                                                .toString()),
-                                                        description: singleData
-                                                            .description,
-                                                        expertAnswer: singleData
-                                                            .expertAnswer,
-                                                        expertImage: singleData
-                                                                .expert
-                                                                ?.healthExpertsImage ??
-                                                            "",
-                                                        expertName: singleData
-                                                                .expert?.name ??
-                                                            "",
-                                                        images: singleData
-                                                            .askexpertImage,
-                                                        language: language,
-                                                        title: singleData.title,
-                                                        userImage: userStore
-                                                            .user!.profileImage,
-                                                        flow: "Q",
-                                                        isEducation: false,
-                                                        onClick: () {});
-                                                  },
-                                                ).visible(mAskQuestionsData
-                                                    .isNotEmpty),
-                                              ],
-                                            ),
-                                          ).visible(mAskQuestionsData
-                                                  .isNotEmpty &&
-                                              appStore.askExpertStatus == true),
-                                          // 80.height,
-                                        ]
-                                      ],
-                                    ),
-                                  ),
-                                ]
-                              ],
-                            ),
-                          ),
-                        ),
-                ],
-              )
+              // Blog carousel above circular beads diagram
+              Container(
+                color: mainColorLight,
+                padding: const EdgeInsets.only(top: 20),
+                child: const BlogCarouselWidget(),
+              ),
+              Container(
+                color: mainColorLight,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: const Center(
+                  child: CircularBeadsDiagram(),
+                ),
+              ),
             ]),
           )
         ],

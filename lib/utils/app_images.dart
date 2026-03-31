@@ -125,3 +125,20 @@ const star = 'assets/star.png';
 const sendbtn = 'assets/sendbtn.png';
 
 const ic_crisp_chat = 'assets/ic_crisps_chat.png';
+
+// CHECKOUT 
+
+const checkout_image = 'assets/checkout_woman.jpg';
+const chat_bot_background_image = 'assets/chat_image.jpg';
+const pay_cards = 'assets/visa.png';
+
+// BLOG
+
+const article_image_1 = 'assets/menstruation-1.jpg';
+const article_image_2 = 'assets/menstruation-2.avif';
+
+// LOGO 
+
+const cyclem_logo = 'assets/logocyclem.png';
+const black_logo = 'assets/cyclem_logo_black.png';
+

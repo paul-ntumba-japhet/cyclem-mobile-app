@@ -67,13 +67,13 @@ class _InterSettingsScreenState extends State<InterSettingsScreen> {
     try {
       appStore.setLoading(true);
       final result = await restoreBackupApi();
-      result.fold((error) => toast("Backup not found"), (success) {
+      result.fold((error) => toast(language.backupNotFound), (success) {
         showBackupSuccessDialog(context,
             lastBackupDate: success.data!.lastSyncDate,
             encryptedString: success.data!.encryptedUserData);
       });
     } catch (e) {
-      toast("Something went wrong");
+      toast(language.somethingWentWrong);
     } finally {
       appStore.setLoading(false);
     }
@@ -218,6 +218,30 @@ class _InterSettingsScreenState extends State<InterSettingsScreen> {
     );
   }
 
+  /// Clear all cache data (phone-specific user data) for testing
+  void clearCacheData(BuildContext c) async {
+    // Close the dialog first
+    Navigator.of(c, rootNavigator: true).pop();
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    appStore.setLoading(true);
+    try {
+      await clearAllCacheData();
+      appStore.setLoading(false);
+      toast(language.cacheClearedSuccess);
+      
+      // Restart app to ensure clean state
+      await TerminateRestart.instance.restartApp(
+        options: const TerminateRestartOptions(
+          terminate: true,
+        ),
+      );
+    } catch (e) {
+      appStore.setLoading(false);
+      toast("${language.errorClearingCache}: ${e.toString()}");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -325,6 +349,25 @@ class _InterSettingsScreenState extends State<InterSettingsScreen> {
                             10.height.visible(
                                 getStringAsync(USER_TYPE) == ANONYMOUS ||
                                     getStringAsync(USER_TYPE) == APP_USER),
+                            // Clear Cache option for testing
+                            mSettingOption(language.clearCacheData, ic_restart, () {
+                              showConfirmDialogCustom(
+                                image: ic_warning,
+                                bgColor: context.cardColor,
+                                iconColor: ColorUtils.colorPrimary,
+                                context,
+                                negativeBg: context.cardColor,
+                                primaryColor: ColorUtils.colorPrimary,
+                                title: language.clearAllCacheDataConfirm,
+                                positiveText: language.yesClear,
+                                negativeText: language.cancel,
+                                height: 100,
+                                onAccept: (c) async {
+                                  clearCacheData(c);
+                                },
+                              );
+                            }),
+                            10.height,
                             Observer(
                               builder: (context) {
                                 return mSettingOption(

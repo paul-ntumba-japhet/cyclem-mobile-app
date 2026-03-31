@@ -12,7 +12,10 @@ import '../../../extensions/extension_util/string_extensions.dart';
 import '../../components/user/warning_dialog.dart';
 import '../../extensions/extensions.dart';
 import '../../main.dart';
+import '../../model/user/cycle_info_model.dart';
+import '../../model/user/subscription_info_model.dart';
 import '../../network/rest_api.dart';
+import '../../service/reminder_service.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/app_images.dart';
@@ -102,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         }
         await setAppSettingData(value.appSettings);
-        await testMenstrualCycleKeysFetch(); // Temporary test
+        //await testMenstrualCycleKeysFetch(); // Temporary test
       });
     } else {
       String jsonData = getStringAsync(LanguageJsonDataRes, defaultValue: "");
@@ -138,7 +141,16 @@ class _SplashScreenState extends State<SplashScreen> {
         await updateAppLanguageConfiguration(data: data, context: context);
       }
     }
-
+    else if (langCode == "fr"){
+      instance.updateLanguageConfiguration(defaultLanguage: Languages.english);
+      if (defaultServerLanguageData != null && defaultServerLanguageData!.isNotEmpty) {
+      LanguageJsonData data = defaultServerLanguageData!.firstWhere(
+        (language) => language.languageCode == 'fr',
+        orElse: () => defaultServerLanguageData![0],
+      );
+      await updateAppLanguageConfiguration(data: data, context: context);
+      }
+    }
     // Check for Dialog or Navigate
     if (!_isNavigating) {
       // Add guard check
@@ -251,10 +263,24 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!isAuthenticated) return;
       final userType = await getStringAsync(USER_TYPE);
       if (userType == APP_USER || userType == ANONYMOUS) {
-        UserModel? userData = await getUserFromLocalStorage();
-        userStore.setUserModelData(userData!);
-        updateConfiguration();
-        DashboardScreen(currentIndex: 0).launch(context, isNewTask: true);
+          UserModel? userData = await getUserFromLocalStorage();
+        if (userData != null) {
+          userStore.setUserModelData(userData);
+          updateConfiguration();
+          
+          // Load cycle info and subscription info from SharedPreferences first (instant)
+          // Then fetch from API in background to update if needed
+          await _loadCycleInfoFromStorage();
+          if (userData.phoneNumber != null && userData.phoneNumber!.isNotEmpty) {
+            _fetchCycleInfoOnStartup(userData.phoneNumber!);
+          }
+          
+          DashboardScreen(currentIndex: 0).launch(context, isNewTask: true);
+        } else {
+          // User data not found in storage - user needs to login again
+          print('⚠️ User data not found in storage. Redirecting to login.');
+          QuestionsListScreen().launch(context, isNewTask: true);
+        }
       } else if (userType == Doctor) {
         DoctorDashboardScreen().launch(context, isNewTask: true);
       } else {
@@ -262,6 +288,94 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     } else {
       QuestionsListScreen().launch(context, isNewTask: true);
+    }
+  }
+  
+  /// Load cycle info and subscription info from SharedPreferences
+  /// This provides instant data on app restart before API fetch completes
+  /// Only loads from phone-specific keys - never from global keys
+  Future<void> _loadCycleInfoFromStorage() async {
+    try {
+      // Get phone number from user data (with fallback to localStorage if userStore is not set yet)
+      String? phoneNumber = userStore.user?.phoneNumber;
+      
+      // Fallback: Try to get phone from localStorage if userStore.user is null
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        try {
+          UserModel? userData = await getUserFromLocalStorage();
+          phoneNumber = userData?.phoneNumber;
+        } catch (e) {
+          print('Error getting phone from localStorage: $e');
+        }
+      }
+      
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+        
+        // Load from phone-specific key only
+        CycleInfoModel? cycleInfo = loadCycleInfoForPhone(phoneForAPI);
+        if (cycleInfo != null) {
+          userStore.setCycleInfo(cycleInfo, isInitialization: true);
+          print('✅ Loaded cycle info from phone-specific storage on app start');
+          
+          // Schedule cycle stage notifications
+          await scheduleCycleStageNotifications();
+        } else {
+          print('ℹ️ No cycle info found for phone: $phoneForAPI');
+        }
+        
+        // Load subscription info from phone-specific key only
+        SubscriptionInfoModel? subscriptionInfo = loadSubscriptionInfoForPhone(phoneForAPI);
+        if (subscriptionInfo != null) {
+          userStore.setSubscriptionInfo(subscriptionInfo, isInitialization: true);
+          print('✅ Loaded subscription info from phone-specific storage on app start');
+        } else {
+          print('ℹ️ No subscription info found for phone: $phoneForAPI');
+        }
+      } else {
+        print('ℹ️ No phone number available - cannot load cycle/subscription info');
+      }
+    } catch (e) {
+      print('⚠️ Error loading cycle/subscription info from storage: $e');
+    }
+  }
+
+  /// Fetch cycle info and subscription info on app startup
+  /// This runs in the background and doesn't block navigation
+  /// Updates the data if API fetch succeeds
+  Future<void> _fetchCycleInfoOnStartup(String phoneNumber) async {
+    try {
+      String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      
+      // Fetch cycle info
+      try {
+        final cycleInfo = await getCycleInfoDirectApi(phoneNumber);
+        await userStore.setCycleInfo(cycleInfo);
+        // Save to phone-specific key only
+        await saveCycleInfoForPhone(phoneForAPI, cycleInfo);
+        print('✅ Updated cycle info from API on app start');
+        
+        // Schedule cycle stage notifications
+        await scheduleCycleStageNotifications();
+      } catch (e) {
+        print('⚠️ Could not fetch cycle info from API on startup: $e');
+        // Continue - we already have data from SharedPreferences
+      }
+      
+      // Fetch subscription info
+      try {
+        final subscriptionInfo = await getSubscriptionInfoApi(phoneNumber);
+        await userStore.setSubscriptionInfo(subscriptionInfo);
+        // Save to phone-specific key only
+        await saveSubscriptionInfoForPhone(phoneForAPI, subscriptionInfo);
+        print('✅ Updated subscription info from API on app start');
+      } catch (e) {
+        // Subscription info fetch is optional - don't fail if it errors
+        print('⚠️ Could not fetch subscription info from API on startup: $e');
+      }
+    } catch (e) {
+      // Cycle info fetch is optional - don't fail if it errors
+      print('Could not fetch cycle info on startup: $e');
     }
   }
 
@@ -282,7 +396,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              ic_app_logo,
+              black_logo,
               width: context.width() * 0.5,
               height: context.height() * 0.5,
             ).expand(),

@@ -7,11 +7,15 @@ import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import '../extensions/common.dart';
 import '../extensions/constants.dart';
+import '../extensions/shared_pref.dart';
 import '../extensions/system_utils.dart';
 import '../main.dart';
+import '../service/auth_token_service.dart';
 import '../utils/app_common.dart';
 import '../utils/app_config.dart';
 
+/// Legacy method - kept for backward compatibility
+/// Use _buildHeadersWithAuth for async token fetching
 Map<String, String> buildHeaderTokens() {
   Map<String, String> header = {
     HttpHeaders.contentTypeHeader: 'application/json; charset=utf-8',
@@ -21,7 +25,16 @@ Map<String, String> buildHeaderTokens() {
     'Access-Control-Allow-Origin': '*',
   };
 
-  if (userStore.isLoggedIn) {
+  // Add API authentication token if cached (synchronous fallback)
+  if (authTokenService.hasCachedToken()) {
+    String cachedToken = getStringAsync('API_AUTH_TOKEN');
+    if (cachedToken.isNotEmpty) {
+      header.putIfAbsent('Authorization', () => 'Bearer $cachedToken');
+    }
+  }
+
+  // Add user authentication token if logged in
+  if (userStore.isLoggedIn && userStore.token.isNotEmpty) {
     header.putIfAbsent(
         HttpHeaders.authorizationHeader, () => 'Bearer ${userStore.token}');
   }
@@ -37,9 +50,9 @@ Uri buildBaseUrl(String endPoint) {
 }
 
 Future<Response> buildHttpResponse(String endPoint,
-    {HttpMethod method = HttpMethod.get, Map? request}) async {
+    {HttpMethod method = HttpMethod.get, Map? request, bool requiresAuth = true}) async {
   if (await isNetworkAvailable()) {
-    var headers = buildHeaderTokens();
+    var headers = await _buildHeadersWithAuth(requiresAuth);
     Uri url = buildBaseUrl(endPoint);
 
     Response response;
@@ -53,6 +66,28 @@ Future<Response> buildHttpResponse(String endPoint,
       response = await put(url, body: jsonEncode(request), headers: headers);
     } else {
       response = await get(url, headers: headers);
+    }
+
+    // Handle 401 Unauthorized - token might be expired, try to refresh
+    if (response.statusCode == 401 && requiresAuth) {
+      try {
+        print('Received 401, attempting to refresh API token...');
+        await authTokenService.refreshToken();
+        // Retry the request with new token
+        headers = await _buildHeadersWithAuth(requiresAuth);
+        if (method == HttpMethod.post) {
+          response =
+              await http.post(url, body: jsonEncode(request), headers: headers);
+        } else if (method == HttpMethod.delete) {
+          response = await delete(url, headers: headers);
+        } else if (method == HttpMethod.put) {
+          response = await put(url, body: jsonEncode(request), headers: headers);
+        } else {
+          response = await get(url, headers: headers);
+        }
+      } catch (e) {
+        print('Failed to refresh token: $e');
+      }
     }
 
     apiURLResponseLog(
@@ -71,6 +106,38 @@ Future<Response> buildHttpResponse(String endPoint,
   } else {
     throw errorInternetNotAvailable;
   }
+}
+
+/// Build headers with API authentication token
+/// This ensures the token is fetched if not cached
+Future<Map<String, String>> _buildHeadersWithAuth(bool requiresAuth) async {
+  Map<String, String> header = {
+    HttpHeaders.contentTypeHeader: 'application/json; charset=utf-8',
+    HttpHeaders.cacheControlHeader: 'no-cache',
+    HttpHeaders.acceptHeader: 'application/json; charset=utf-8',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Origin': '*',
+  };
+
+  // Add API authentication token (required for authenticated requests)
+  if (requiresAuth) {
+    try {
+      String token = await authTokenService.getToken();
+      header.putIfAbsent('Authorization', () => 'Bearer $token');
+    } catch (e) {
+      print('Warning: Failed to get API auth token: $e');
+      // Continue without token, the API will return 401 if needed
+    }
+  }
+
+  // Add user authentication token if logged in
+  if (userStore.isLoggedIn && userStore.token.isNotEmpty) {
+    header.putIfAbsent(
+        HttpHeaders.authorizationHeader, () => 'Bearer ${userStore.token}');
+  }
+
+  log(jsonEncode(header));
+  return header;
 }
 
 @deprecated

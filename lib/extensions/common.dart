@@ -443,6 +443,9 @@ void updateMenstrualWidgetLanguage() {
     } else if (selectedServerLanguageData!.languageCode == "ar") {
       language = Languages.arabic;
     }
+    else if (selectedServerLanguageData!.languageCode == "fr") {
+      language = Languages.english;
+    }
   }
   if(language!=null) {
     language = Languages.english;

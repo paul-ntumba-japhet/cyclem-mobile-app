@@ -5,6 +5,7 @@ import 'package:era_flutter/screens/screens.dart';
 import 'package:era_flutter/utils/dynamic_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'dart:async';
 
 import '../../extensions/shared_pref.dart';
 import '../../main.dart';
@@ -24,12 +25,33 @@ class PleaseWaitScreen extends StatefulWidget {
 
 class _PleaseWaitScreenState extends State<PleaseWaitScreen> {
   QuestionsModel? questionsModelData;
+  late Timer _dotsTimer;
+  int _dotCount = 0;
 
   @override
   void initState() {
     super.initState();
     updateUserGoalStatus();
     logScreenView("GoalType process screen");
+    
+    // Start 3 dots animation
+    _dotsTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+      if (mounted) {
+        setState(() {
+          _dotCount = (_dotCount + 1) % 4; // 0, 1, 2, 3 (0 = no dots, 3 = three dots)
+        });
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _dotsTimer.cancel();
+    super.dispose();
+  }
+  
+  String _getDotsText() {
+    return '.' * _dotCount;
   }
 
   updateUserGoalStatus() async {
@@ -40,6 +62,11 @@ class _PleaseWaitScreenState extends State<PleaseWaitScreen> {
       questionsModelData = QuestionsModel(
         step1: step1,
         step2: step2,
+        step2Phone: step2Phone,
+        step3PersonalInfo: step3PersonalInfo,
+        step4Question1: step4Question1,
+        step4Question2: step4Question2,
+        step4Question3: step4Question3,
         step3: step3,
         step4: step4,
         step5: step5,
@@ -53,7 +80,14 @@ class _PleaseWaitScreenState extends State<PleaseWaitScreen> {
     };
     await updateUserStatusApi(req).then(
       (value) {
-        setValue(KEY_QUESTION_DATA, questionsModelData!.toJson());
+        // Save to phone-specific key only
+        String? phoneNumber = userStore.user?.phoneNumber;
+        if (phoneNumber != null && phoneNumber.isNotEmpty) {
+          String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+          if (phoneForAPI.isNotEmpty) {
+            saveQuestionDataForPhone(phoneForAPI, questionsModelData!);
+          }
+        }
         setValue(GOAL, widget.currentGoalType);
         userStore.setGoal(widget.currentGoalType);
 
@@ -85,21 +119,14 @@ class _PleaseWaitScreenState extends State<PleaseWaitScreen> {
                   size: 80.0,
                 ),
                 30.height,
-                // Text
+                // Animated 3 dots
                 Text(
-                  language.pleaseWait,
+                  _getDotsText(),
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 48,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                  ),
-                ),
-                10.height,
-                Text(
-                  language.weAreBuilding,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
+                    letterSpacing: 8,
                   ),
                 ),
               ],

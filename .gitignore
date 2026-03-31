@@ -1,0 +1,57 @@
+# --- Flutter / Dart ---
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+build/
+coverage/
+doc/api/
+
+# Generated lockfiles and package metadata
+# Keep pubspec.lock for applications (this is an app), so do NOT ignore it.
+
+# --- Android / iOS / native build artifacts ---
+android/.gradle/
+android/captures/
+android/local.properties
+android/key.properties
+android/**/GeneratedPluginRegistrant.java
+android/**/app.dill
+android/**/flutter_assets/
+android/**/outputs/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Pods/
+ios/.symlinks/
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# --- Logs / temp ---
+*.log
+*.tmp
+*.temp
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.iml
+
+# --- Cursor / local assistant metadata ---
+.cursor/
+
+# --- Secrets / signing files ---
+*.keystore
+*.jks
+*.p12
+*.pem
+*.mobileprovision
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db

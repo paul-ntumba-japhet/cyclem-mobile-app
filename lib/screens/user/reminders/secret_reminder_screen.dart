@@ -112,9 +112,7 @@ class _SecretReminderScreenState extends State<SecretReminderScreen> {
                                     child: Row(
                                       children: [
                                         Image.asset(
-                                          _reminderModel[i].id == 0
-                                              ? ic_app_logo
-                                              : ic_logo_gray,
+                                          black_logo,
                                           height: _reminderModel[i].id == 0
                                               ? 40
                                               : 35,

@@ -10,11 +10,13 @@ class QuestionAnswerModel {
   StringBuffer? answer;
   bool? isLoading;
   String? smartCompose;
+  List<String>? smartReplies;
 
   QuestionAnswerModel({
     this.question,
     this.answer,
     this.isLoading,
     this.smartCompose,
+    this.smartReplies,
   });
 }

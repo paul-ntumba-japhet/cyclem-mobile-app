@@ -10,8 +10,10 @@ import 'package:era_flutter/extensions/text_styles.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart' show Lottie;
+import 'dart:convert';
 
 import '../extensions/new_colors.dart';
+import '../extensions/shared_pref.dart';
 import '../main.dart';
 import 'chat_message_Image_widget.dart';
 
@@ -46,12 +48,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
   List<QuestionAnswerModel> questionAnswers = [];
 
   late OpenAI openAI;
+  
+  static const String _chatHistoryKey = 'AI_CHAT_HISTORY';
+  static const String _lastChatActivityKey = 'AI_CHAT_LAST_ACTIVITY';
+  static const Duration _inactivityThreshold = Duration(hours: 1);
 
   @override
   void initState() {
     super.initState();
 
-    Future.value().then((_) {
+    Future.value().then((_) async {
       openAI = OpenAI.instance.build(
           token: chatgptKey!,
           baseOption: HttpSetup(
@@ -59,8 +65,120 @@ class _AiChatScreenState extends State<AiChatScreen> {
               connectTimeout: const Duration(seconds: 20)),
           enableLog: true);
 
-      sendAutoFirstMsg(widget.questionAsk);
+      // Load chat history
+      await _loadChatHistory();
+      
+      // Check if we should show welcome message (after 1 hour of inactivity)
+      bool shouldShowWelcome = await _shouldShowWelcomeMessage();
+      
+      if (shouldShowWelcome) {
+        // Add welcome message at the beginning of the list (most recent)
+        _addWelcomeMessage();
+        await _saveChatHistory();
+      }
+      
+      // Send auto message if provided (only if no welcome was just shown)
+      if (widget.questionAsk != null && widget.questionAsk!.isNotEmpty && !shouldShowWelcome) {
+        sendAutoFirstMsg(widget.questionAsk);
+      }
+      
+      // Update last activity timestamp
+      await _updateLastActivity();
     });
+  }
+  
+  Future<void> _loadChatHistory() async {
+    try {
+      String? historyJson = getStringAsync(_chatHistoryKey, defaultValue: '');
+      if (historyJson.isNotEmpty) {
+        List<dynamic> historyList = jsonDecode(historyJson);
+        questionAnswers = historyList.map((item) {
+          return QuestionAnswerModel(
+            question: item['question'],
+            answer: StringBuffer(item['answer'] ?? ''),
+            isLoading: false,
+            smartCompose: item['smartCompose'] ?? '',
+            smartReplies: item['smartReplies'] != null 
+                ? List<String>.from(item['smartReplies']) 
+                : null,
+          );
+        }).toList();
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
+  }
+  
+  Future<void> _saveChatHistory() async {
+    try {
+      List<Map<String, dynamic>> historyList = questionAnswers.map((qa) {
+        return {
+          'question': qa.question ?? '',
+          'answer': qa.answer?.toString() ?? '',
+          'smartCompose': qa.smartCompose ?? '',
+          'smartReplies': qa.smartReplies,
+        };
+      }).toList();
+      String historyJson = jsonEncode(historyList);
+      await setValue(_chatHistoryKey, historyJson);
+    } catch (e) {
+      print('Error saving chat history: $e');
+    }
+  }
+  
+  Future<bool> _shouldShowWelcomeMessage() async {
+    try {
+      String? lastActivityStr = getStringAsync(_lastChatActivityKey, defaultValue: '');
+      if (lastActivityStr.isEmpty) {
+        // No previous activity, show welcome
+        return true;
+      }
+      
+      DateTime lastActivity = DateTime.parse(lastActivityStr);
+      DateTime now = DateTime.now();
+      Duration timeSinceLastActivity = now.difference(lastActivity);
+      
+      // Show welcome if more than 1 hour has passed
+      return timeSinceLastActivity >= _inactivityThreshold;
+    } catch (e) {
+      print('Error checking last activity: $e');
+      return false;
+    }
+  }
+  
+  void _addWelcomeMessage() {
+    String greeting = _getGreetingMessage();
+    String welcomeText = '$greeting! 👋\n\nI\'m here to help you with questions about your menstrual cycle, fertility, health, and more. Feel free to ask me anything!';
+    
+    questionAnswers.insert(
+      0,
+      QuestionAnswerModel(
+        question: '',
+        answer: StringBuffer(welcomeText),
+        isLoading: false,
+        smartCompose: '',
+        smartReplies: ['Yes', 'No'], // Always show Yes/No smart replies under welcome message
+      ),
+    );
+    setState(() {});
+  }
+  
+  String _getGreetingMessage() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good Afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good Evening';
+    } else {
+      return 'Good Night';
+    }
+  }
+  
+  Future<void> _updateLastActivity() async {
+    await setValue(_lastChatActivityKey, DateTime.now().toIso8601String());
   }
 
   void sendMessage() async {
@@ -105,6 +223,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
     questionAnswers[0].isLoading = false;
     showResponse = false;
 
+    // Save chat history after message is sent
+    await _saveChatHistory();
+    await _updateLastActivity();
+
     setState(() {});
   }
 
@@ -143,6 +265,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
     isLoading = false;
     questionAnswers[0].isLoading = false;
     showResponse = false;
+    
+    // Save chat history after auto message is sent
+    await _saveChatHistory();
+    await _updateLastActivity();
+    
     setState(() {});
   }
 
@@ -163,6 +290,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void dispose() {
     msgController.dispose();
+    // Save chat history before disposing
+    _saveChatHistory();
     super.dispose();
   }
 
@@ -180,7 +309,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Era Ai',
+              'CycleM Ai',
               style: boldTextStyle(
                 color: mainColorText,
                 size: 18,
@@ -234,6 +363,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
                                       data: data,
                                       isLoading: data.isLoading ?? false,
                                       firstQuestion: widget.questionAsk ?? '',
+                                      onSmartReplyTap: (reply) {
+                                        // Send smart reply as a user message
+                                        msgController.text = reply;
+                                        sendMessage();
+                                      },
                                     ),
                                     Divider(color: Colors.transparent),
                                   ],
@@ -252,7 +386,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                                     width: 100, height: 100),
                                 8.height,
                                 Text(
-                                  'Please wait...',
+                                  language.pleaseWait,
                                   style: primaryTextStyle(size: 14),
                                 )
                               ],

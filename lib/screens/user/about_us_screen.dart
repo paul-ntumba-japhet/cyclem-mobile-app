@@ -6,7 +6,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extensions.dart';
 import '../../extensions/new_colors.dart';
+import '../../extensions/shared_pref.dart';
+import '../../languageConfiguration/LanguageDataConstant.dart';
 import '../../main.dart';
+import '../../utils/app_config.dart';
 import '../../utils/dynamic_theme.dart';
 import '../../utils/utils.dart';
 
@@ -21,6 +24,89 @@ class AboutUsScreen extends StatefulWidget {
 
 class _AboutUsScreenState extends State<AboutUsScreen> {
   bool isLoading = true;
+
+  // Static about content for CycleM
+  String get _staticAboutContentFrench => '''CycleM est une application complète de suivi du cycle menstruel conçue pour vous aider à mieux comprendre et gérer votre santé reproductive.
+
+NOS FONCTIONNALITÉS PRINCIPALES :
+
+• Suivi du cycle menstruel : Enregistrez vos périodes et suivez votre cycle avec précision
+
+• Prédiction des règles : Recevez des prévisions précises de vos prochaines règles
+
+• Fenêtre de fertilité : Identifiez vos jours les plus fertiles pour planifier ou éviter une grossesse
+
+• Calendrier menstruel : Visualisez votre cycle sur un calendrier interactif
+
+• Graphiques et rapports : Analysez vos données de cycle avec des graphiques détaillés
+
+• Notifications personnalisées : Recevez des rappels pour les étapes importantes de votre cycle
+
+• Articles et blog : Accédez à des informations éducatives sur la santé menstruelle
+
+• Assistant IA : Obtenez des réponses à vos questions sur votre cycle
+
+• Suivi de la santé : Enregistrez vos symptômes et vos observations
+
+NOTRE MISSION :
+
+CycleM s'engage à fournir des outils précis et fiables pour vous aider à prendre le contrôle de votre santé reproductive. Nous croyons que chaque femme mérite d'avoir accès à des informations claires et personnalisées sur son cycle menstruel.
+
+CONFIDENTIALITÉ ET SÉCURITÉ :
+
+Vos données sont importantes pour nous. Nous utilisons des mesures de sécurité avancées pour protéger vos informations personnelles et respectons strictement notre politique de confidentialité.''';
+
+  String get _staticAboutContentEnglish => '''CycleM is a comprehensive menstrual cycle tracking application designed to help you better understand and manage your reproductive health.
+
+OUR KEY FEATURES:
+
+• Cycle Tracking: Record your periods and track your cycle with precision
+
+• Period Prediction: Receive accurate predictions of your next period
+
+• Fertility Window: Identify your most fertile days for planning or avoiding pregnancy
+
+• Menstrual Calendar: Visualize your cycle on an interactive calendar
+
+• Charts & Reports: Analyze your cycle data with detailed charts
+
+• Personalized Notifications: Receive reminders for important stages of your cycle
+
+• Articles & Blog: Access educational information about menstrual health
+
+• AI Assistant: Get answers to your questions about your cycle
+
+• Health Tracking: Record your symptoms and observations
+
+OUR MISSION:
+
+CycleM is committed to providing accurate and reliable tools to help you take control of your reproductive health. We believe every woman deserves access to clear and personalized information about her menstrual cycle.
+
+PRIVACY & SECURITY:
+
+Your data matters to us. We use advanced security measures to protect your personal information and strictly adhere to our privacy policy.''';
+
+  String _getAboutContent() {
+    String siteDescription = getStringAsync(SITE_DESCRIPTION, defaultValue: '');
+    if (siteDescription.isNotEmpty) {
+      return siteDescription;
+    }
+    
+    // Get current language code
+    String currentLanguage = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: DEFAULT_LANGUAGE);
+    
+    // Return appropriate language version
+    if (currentLanguage == 'en') {
+      return _staticAboutContentEnglish;
+    } else {
+      return _staticAboutContentFrench;
+    }
+  }
+
+  String _getSiteName() {
+    String siteName = getStringAsync(SITE_NAME, defaultValue: '');
+    return siteName.isNotEmpty ? siteName : APP_NAME;
+  }
 
   @override
   void initState() {
@@ -99,7 +185,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                           children: [
                             4.height,
                             Text(
-                              getStringAsync(SITE_NAME),
+                              _getSiteName(),
                               style: boldTextStyle(
                                 color: ColorUtils.colorPrimary,
                                 size: textFontSize_18,
@@ -107,9 +193,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                             ),
                             10.height,
                             Text(
-                              getStringAsync(SITE_DESCRIPTION,
-                                  defaultValue:
-                                      language.noDescriptionAvailable),
+                              _getAboutContent(),
                               style: primaryTextStyle(),
                             ),
                             16.height,

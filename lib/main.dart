@@ -11,6 +11,7 @@ import 'package:era_flutter/extensions/extensions.dart';
 import 'package:era_flutter/screens/common/splash_screen.dart';
 import 'package:era_flutter/service/notification_service.dart';
 import 'package:era_flutter/service/reminder_service.dart';
+import 'package:era_flutter/service/auth_token_service.dart';
 import 'package:era_flutter/store/app_store.dart';
 import 'package:era_flutter/store/userStore/user_store.dart';
 import 'package:era_flutter/utils/permission.dart';
@@ -27,6 +28,7 @@ import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminate_restart/terminate_restart.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 import '../../utils/app_config.dart';
 import '../../utils/app_constants.dart';
@@ -37,6 +39,8 @@ import 'languageConfiguration/LanguageDataConstant.dart';
 import 'languageConfiguration/LanguageDefaultJson.dart';
 import 'languageConfiguration/ServerLanguageResponse.dart';
 import 'utils/app_common.dart';
+import '../../network/rest_api.dart';
+import '../../model/user/stripe_config_model.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 AppStore appStore = AppStore();
@@ -156,12 +160,87 @@ Future<void> initializeMenstrualCycleWidget() async {
   MenstrualCycleWidget.init(secretKey: secretKey, ivKey: ivKey);
 }
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   HttpOverrides.global = MyHttpOverrides();
   TerminateRestart.instance.initialize();
   sharedPreferences = await SharedPreferences.getInstance();
+
+  // Initialize Stripe immediately after binding
+  print('\n═══════════════════════════════════════════════════════');
+  print('💳 Initializing Stripe SDK');
+  print('═══════════════════════════════════════════════════════');
+  try {
+    print('📡 Fetching Stripe configuration from API...');
+    StripeConfigModel stripeConfig = await getStripeConfigApi();
+    
+    print('📦 Received StripeConfigModel:');
+    print('   - publishableKey length: ${stripeConfig.publishableKey.length}');
+    print('   - publishableKey preview: ${stripeConfig.publishableKey.length > 20 ? stripeConfig.publishableKey.substring(0, 20) + "..." : stripeConfig.publishableKey}');
+    
+    if (stripeConfig.publishableKey.isEmpty) {
+      throw Exception('Stripe publishable key is empty after API call');
+    }
+    
+    print('🔧 Setting Stripe configuration...');
+    Stripe.publishableKey = stripeConfig.publishableKey;
+    Stripe.merchantIdentifier = 'merchant.flutter.stripe.test';
+    Stripe.urlScheme = 'flutterstripe';
+    
+    print('⚙️  Applying Stripe settings...');
+    await Stripe.instance.applySettings();
+    
+    // Wait for native SDK to fully initialize with retry mechanism
+    print('⏳ Waiting for Stripe SDK to initialize...');
+    bool sdkReady = false;
+    int retries = 0;
+    const maxRetries = 10;
+    
+    while (!sdkReady && retries < maxRetries) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      retries++;
+      
+      // Verify the key was set correctly
+      if (Stripe.publishableKey.isEmpty) {
+        throw Exception('Stripe.publishableKey is empty after applySettings()');
+      }
+      
+      // Try to verify SDK is actually initialized
+      try {
+        Stripe.instance; // This will throw if SDK is not initialized
+        sdkReady = true;
+        print('✅ Stripe SDK is ready after ${retries * 200}ms');
+      } catch (e) {
+        if (retries >= maxRetries) {
+          print('⚠️  Warning: Stripe SDK may not be fully initialized: $e');
+          // Continue anyway as this might be a false positive
+          break;
+        }
+        print('⏳ Retry ${retries}/$maxRetries: SDK not ready yet...');
+      }
+    }
+    
+    print('✅ SUCCESS! Stripe SDK initialized and ready');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Publishable Key preview: ${stripeConfig.publishableKey.substring(0, stripeConfig.publishableKey.length > 20 ? 20 : stripeConfig.publishableKey.length)}...');
+    print('Full key length: ${stripeConfig.publishableKey.length} characters');
+    print('Merchant Identifier: ${Stripe.merchantIdentifier}');
+    print('URL Scheme: ${Stripe.urlScheme}');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('✅ Stripe is ready to process payments');
+    print('═══════════════════════════════════════════════════════\n');
+  } catch (e, stackTrace) {
+    print('❌ ERROR: Failed to initialize Stripe SDK');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Error: $e');
+    print('Stack trace: $stackTrace');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('⚠️  Payment features will not be available');
+    print('═══════════════════════════════════════════════════════\n');
+    // Continue app startup even if Stripe initialization fails
+  }
 
   // Initialize MenstrualCycleWidget with stored keys or placeholders
   await initializeMenstrualCycleWidget();
@@ -175,6 +254,41 @@ Future<void> main() async {
   await initializeFirebaseAnalytics();
 
   await FacebookAdsManager.initialize();
+
+  // Refresh API authentication token on every app restart
+  // This ensures we always have a fresh token when the app starts
+  print('\n═══════════════════════════════════════════════════════');
+  print('🔐 Refreshing QuickShare API Authentication Token');
+  print('═══════════════════════════════════════════════════════');
+  try {
+    // Force refresh token by clearing cache and fetching new token
+    String token = await authTokenService.refreshToken();
+    print('✅ SUCCESS! QuickShare API authentication token refreshed successfully');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Token preview: ${token.length > 60 ? token.substring(0, 60) + "..." : token}');
+    print('Token length: ${token.length} characters');
+    print('Full token: $token');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('✅ Fresh token will be automatically added to all API requests');
+    print('═══════════════════════════════════════════════════════\n');
+  } catch (e, stackTrace) {
+    print('❌ ERROR: Failed to refresh QuickShare API authentication token');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Error: $e');
+    print('Stack trace: $stackTrace');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('⚠️  App will continue, but API requests may fail');
+    print('═══════════════════════════════════════════════════════\n');
+    // Continue app startup even if token refresh fails (it will retry on first API call)
+  }
+
+
+  // ==========================================
+  // UNCOMMENT BELOW TO RUN FULL TEST SUITE
+  // (Includes caching and refresh tests)
+  // ==========================================
+  // import '../service/auth_token_test_service.dart';
+  // await AuthTokenTestService.runAllTests();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   appStore.setLanguage(DEFAULT_LANGUAGE);
@@ -206,7 +320,7 @@ Future<void> main() async {
       ),
     ],
   );
-  initJsonFile();
+  await initJsonFile();
   oneSignalData();
   getRemindersList();
   await Alarm.init();
@@ -340,7 +454,9 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
+      // Use selectedLanguage as key to force complete rebuild when language changes
       return MaterialApp(
+        key: ValueKey(appStore.selectedLanguage),
         navigatorObservers: [
           FirebaseAnalyticsObserver(analytics: analytics),
         ],

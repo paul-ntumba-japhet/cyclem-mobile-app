@@ -2,19 +2,27 @@ import 'dart:io';
 
 import 'package:era_flutter/utils/app_images.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:intl/intl.dart';
 import 'package:menstrual_cycle_widget/database_helper/menstrual_cycle_db_helper.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import 'package:menstrual_cycle_widget/ui/menstrual_log_period_view.dart';
 import 'package:menstrual_cycle_widget/ui/model/display_symptoms_data.dart';
 import '../../extensions/extensions.dart';
 import '../../main.dart';
+import '../../model/user/cycle_info_model.dart';
 import '../../model/user/dashboard_response.dart';
 import '../../network/rest_api.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
+import '../../screens/payment/checkout.dart';
+import '../../service/phone_verification_service.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
 import '../../utils/navigation_utils.dart';
+import '../../utils/period_date_validation.dart';
+import '../../extensions/shared_pref.dart';
+import '../../model/user/payment_status_model.dart';
 import '../screens.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -31,6 +39,7 @@ class DashboardScreen extends StatefulWidget {
 class DashboardScreenState extends State<DashboardScreen> {
   List<SymptomsCategory> mSymptomsCategory = [];
   bool isSuccess = false;
+  bool _isLoadingDatePicker = false;
 
   onSuccess() {
     appStore.setHomeScreenUpdated(true);
@@ -42,8 +51,10 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> tab = [
     HomeScreen(),
-    InsightsScreen(),
+    // InsightsScreen(), // Commented out - redirecting to IkChatbotScreen instead
+    IkChatbotScreen(),
     GraphsAndReportScreen(),
+    MenstrualCalendarScreen(),
     SettingScreen(),
   ];
 
@@ -167,6 +178,245 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Handle + button tap: show date picker, validate, check payment status, and update period date
+  Future<void> _handlePlusButtonDatePicker() async {
+    if (!mounted || _isLoadingDatePicker) return;
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    NavigatorState? dialogNavigator;
+
+    // Helper function to safely close the dialog
+    void closeDialog() {
+      if (mounted && dialogNavigator != null) {
+        try {
+          if (dialogNavigator!.canPop()) {
+            dialogNavigator!.pop();
+          }
+        } catch (e) {
+          // Dialog already closed or context invalid, ignore
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _isLoadingDatePicker = false;
+        });
+      }
+    }
+
+    try {
+      // Step 1: Show date picker
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final firstDate = today.subtract(const Duration(days: lastPeriodDateMaxDaysAgo));
+
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: today,
+        firstDate: firstDate,
+        lastDate: today,
+        helpText: language.dateSelected,
+      );
+
+      if (picked == null || !mounted) return;
+
+      // Step 2: Validate the selected date
+      final validation = validateLastPeriodDate(picked);
+      if (!validation.isValid) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(validation.errorMessage ?? periodDateValidationErrorTooOld),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Step 3: Get and format phone number
+      String fullPhoneNumber = userStore.user?.phoneNumber ?? '';
+      fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      if (!fullPhoneNumber.startsWith('+') && fullPhoneNumber.isNotEmpty) {
+        fullPhoneNumber = '+$fullPhoneNumber';
+      }
+
+      if (fullPhoneNumber.isEmpty) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(language.phoneNotAvailablePleaseReconnect),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Step 4: Check payment status (with loading)
+      setState(() {
+        _isLoadingDatePicker = true;
+      });
+
+      // Show loading dialog and store the navigator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          dialogNavigator = Navigator.of(dialogContext);
+          return PopScope(
+            canPop: false,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(
+                      language.pleaseWait,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      PaymentStatusModel? paymentStatus;
+      try {
+        paymentStatus = await getPaymentStatusApi(fullPhoneNumber);
+      } catch (e) {
+        if (mounted) {
+          closeDialog();
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('${language.errorLabel}: ${language.failedToLoadTransactions}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) {
+        closeDialog();
+        return;
+      }
+
+      // Step 5: Handle different payment status codes
+      if (paymentStatus.code == '100') {
+        // Active payment - call subscription API
+        final periodDate = DateFormat('yyyy-MM-dd').format(picked);
+
+        // Prepare question answers (default values)
+        const bool q1 = true;
+        const bool q2 = true;
+        const bool q3 = false;
+
+        // Call subscription API
+        final success = await PhoneVerificationService.createSubscriptionWithPeriodDate(
+          phoneNumber: fullPhoneNumber,
+          periodDate: periodDate,
+          question1Answer: q1,
+          question2Answer: q2,
+          question3Answer: q3,
+        );
+
+        if (!mounted) {
+          closeDialog();
+          return;
+        }
+
+        closeDialog();
+
+        // Check if API returned status 200
+        if (success) {
+          // Subscription API returned status 200 - update period date
+          final phoneForAPI = fullPhoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+          await userStore.setPeriodDate(periodDate);
+
+          // Update cycle info
+          final existingCycleInfo = userStore.cycleInfo ?? loadCycleInfoForPhone(phoneForAPI);
+          final updatedCycleInfo = CycleInfoModel(
+            dateCreation: existingCycleInfo?.dateCreation,
+            dateFertiStart: existingCycleInfo?.dateFertiStart,
+            dateFertireqEnd: existingCycleInfo?.dateFertireqEnd,
+            dateRegle: periodDate,
+            dateProchaineReglesStart: existingCycleInfo?.dateProchaineReglesStart,
+            dateProchaineReglesEnd: existingCycleInfo?.dateProchaineReglesEnd,
+          );
+          await userStore.setCycleInfo(updatedCycleInfo);
+          await saveCycleInfoForPhone(phoneForAPI, updatedCycleInfo);
+          await setValue(KEY_CYCLE_INFO, updatedCycleInfo.toJson());
+
+          // Show success message
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(language.periodDateSavedSuccess),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
+          // Update configuration and refresh UI
+          updateConfiguration();
+          appStore.setHomeScreenUpdated(true);
+        } else {
+          // Subscription API did not return status 200
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(language.cycleStillActive),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else if (paymentStatus.code == '300') {
+        // Inactive payment - check country code
+        closeDialog();
+
+        if (!isDRCCountryCode(fullPhoneNumber)) {
+          // Not DRC (country code 243) - redirect to payment
+          StripeCheckout().launch(context);
+        } else {
+          // DRC (country code 243) - show message
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(language.mustPayBeforeSubmittingDate),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Other payment status - show error
+        closeDialog();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(language.anErrorHasOccurred),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Close loading dialog if it's still open
+        closeDialog();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('${language.errorLabel}: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -181,113 +431,136 @@ class DashboardScreenState extends State<DashboardScreen> {
         floatingActionButton: FloatingActionButton(
           elevation: 0,
           heroTag: language.todayActivity,
-          child: Icon(Icons.add, size: 44, color: Colors.white),
-          onPressed: () async {
-            final isConnected = await isNetworkAvailable();
-            if (isConnected) {
-              if (mSymptomsCategory == []) {
-                await AddSymptomsApiCall();
-              }
-            }
-
-            navigateToMenstrualLogPeriodView(isConnected);
-          },
+          child: _isLoadingDatePicker
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Icon(Icons.add, size: 44, color: Colors.white),
+          onPressed: _isLoadingDatePicker
+              ? null
+              : () async {
+                  await _handlePlusButtonDatePicker();
+                },
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: StylishBottomBar(
-          backgroundColor: kPrimaryColor,
-          hasNotch: true,
-          notchStyle: NotchStyle.circle,
-          elevation: 1,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(12),
-          ),
-          option: AnimatedBarOptions(iconStyle: IconStyle.Default),
-          currentIndex: widget.currentIndex,
-          fabLocation: StylishBarFabLocation.center,
-          onTap: (index) async {
-            if (index != widget.currentIndex) {
-              if (index == 1) {
-                bool isConnected = await isNetworkAvailable();
-                if (!isConnected) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          language.noInternetConnectionCannotAccessThisPage),
-                      backgroundColor: ColorUtils.colorPrimary,
-                    ),
-                  );
-                  return;
+        bottomNavigationBar: Observer(
+          builder: (context) {
+            // Access appStore.selectedLanguage to ensure Observer tracks language changes
+            appStore.selectedLanguage;
+            return StylishBottomBar(
+              backgroundColor: kPrimaryColor,
+              hasNotch: true,
+              notchStyle: NotchStyle.circle,
+              elevation: 1,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              option: AnimatedBarOptions(iconStyle: IconStyle.Default),
+              currentIndex: widget.currentIndex,
+              fabLocation: StylishBarFabLocation.center,
+              onTap: (index) async {
+                if (index != widget.currentIndex) {
+                  if (index == 1) {
+                    bool isConnected = await isNetworkAvailable();
+                    if (!isConnected) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              language.noInternetConnectionCannotAccessThisPage),
+                          backgroundColor: ColorUtils.colorPrimary,
+                        ),
+                      );
+                      return;
+                    }
+                  }
+                  setState(() {
+                    widget.currentIndex = index;
+                  });
                 }
-              }
-              setState(() {
-                widget.currentIndex = index;
-              });
-            }
+              },
+              items: [
+                BottomBarItem(
+                  icon: Icon(Icons.home_outlined, size: 24, color: textPrimaryColorGlobal),
+                  selectedIcon: Icon(Icons.home, size: 24, color: ColorUtils.colorPrimary),
+                  title: Text(
+                    language.homeLabel,
+                    style: boldTextStyle(
+                      weight: FontWeight.w400,
+                      size: textFontSize_12,
+                      color: widget.currentIndex == 0
+                          ? ColorUtils.colorPrimary
+                          : textPrimaryColorGlobal,
+                    ),
+                  ),
+                ),
+                BottomBarItem(
+                  icon: Icon(Icons.chat_bubble_outline, size: 24, color: textPrimaryColorGlobal),
+                  selectedIcon: Icon(Icons.chat_bubble, size: 24, color: ColorUtils.colorPrimary),
+                  title: Text(
+                    language.chatLabel,
+                    style: boldTextStyle(
+                      weight: FontWeight.w400,
+                      size: textFontSize_12,
+                      color: widget.currentIndex == 1
+                          ? ColorUtils.colorPrimary
+                          : textPrimaryColorGlobal,
+                    ),
+                  ),
+                ),
+                BottomBarItem(
+                  icon: Image.asset(ic_clipboard, width: 24),
+                  selectedIcon: Image.asset(ic_clipboard,
+                      color: ColorUtils.colorPrimary, width: 24),
+                  title: Text(
+                    language.reports,
+                    style: boldTextStyle(
+                      weight: FontWeight.w400,
+                      size: textFontSize_12,
+                      color: widget.currentIndex == 2
+                          ? ColorUtils.colorPrimary
+                          : textPrimaryColorGlobal,
+                    ),
+                  ),
+                ),
+                BottomBarItem(
+                  icon: Image.asset(ic_calendar_minimalistic, width: 24),
+                  selectedIcon: Image.asset(ic_calendar_minimalistic,
+                      color: ColorUtils.colorPrimary, width: 24),
+                  title: Text(
+                    language.calendarLabel,
+                    style: boldTextStyle(
+                      weight: FontWeight.w400,
+                      size: textFontSize_12,
+                      color: widget.currentIndex == 3
+                          ? ColorUtils.colorPrimary
+                          : textPrimaryColorGlobal,
+                    ),
+                  ),
+                ),
+                BottomBarItem(
+                  icon: Image.asset(ic_user_circle, width: 24),
+                  selectedIcon: Image.asset(ic_user_circle,
+                      color: ColorUtils.colorPrimary, width: 24),
+                  title: Text(
+                    language.Account,
+                    style: boldTextStyle(
+                      weight: FontWeight.w400,
+                      size: textFontSize_12,
+                      color: widget.currentIndex == 4
+                          ? ColorUtils.colorPrimary
+                          : textPrimaryColorGlobal,
+                    ),
+                  ),
+                ),
+              ],
+            );
           },
-          items: [
-            BottomBarItem(
-              icon: Image.asset(ic_calender, width: 24),
-              selectedIcon: Image.asset(ic_calender,
-                  color: ColorUtils.colorPrimary, width: 24),
-              title: Text(
-                language.analysis,
-                style: boldTextStyle(
-                  weight: FontWeight.w400,
-                  size: textFontSize_12,
-                  color: widget.currentIndex == 0
-                      ? ColorUtils.colorPrimary
-                      : textPrimaryColorGlobal,
-                ),
-              ),
-            ),
-            BottomBarItem(
-              icon: Image.asset(ic_analysis, width: 24),
-              selectedIcon: Image.asset(ic_analysis,
-                  color: ColorUtils.colorPrimary, width: 24),
-              title: Text(
-                language.selfCare,
-                style: boldTextStyle(
-                  weight: FontWeight.w400,
-                  size: textFontSize_12,
-                  color: widget.currentIndex == 1
-                      ? ColorUtils.colorPrimary
-                      : textPrimaryColorGlobal,
-                ),
-              ),
-            ),
-            BottomBarItem(
-              icon: Image.asset(ic_clipboard, width: 24),
-              selectedIcon: Image.asset(ic_clipboard,
-                  color: ColorUtils.colorPrimary, width: 24),
-              title: Text(
-                language.reports,
-                style: boldTextStyle(
-                  weight: FontWeight.w400,
-                  size: textFontSize_12,
-                  color: widget.currentIndex == 2
-                      ? ColorUtils.colorPrimary
-                      : textPrimaryColorGlobal,
-                ),
-              ),
-            ),
-            BottomBarItem(
-              icon: Image.asset(ic_user_circle, width: 24),
-              selectedIcon: Image.asset(ic_user_circle,
-                  color: ColorUtils.colorPrimary, width: 24),
-              title: Text(
-                language.Account,
-                style: boldTextStyle(
-                  weight: FontWeight.w400,
-                  size: textFontSize_12,
-                  color: widget.currentIndex == 3
-                      ? ColorUtils.colorPrimary
-                      : textPrimaryColorGlobal,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -304,6 +577,8 @@ class DashboardScreenState extends State<DashboardScreen> {
         return tab[2];
       case 3:
         return tab[3];
+      case 4:
+        return tab[4];
       default:
         return tab[0];
     }

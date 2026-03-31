@@ -29,12 +29,12 @@ class _PolicyScreenState extends State<PolicyScreen> {
 
   void getList() {
     list.add(PrivacyItem(0,
-        "${language.iAgreeTo} Era's ${language.termsAndConditions}.", false));
+        "${language.iAgreeTo} CycleM's ${language.termsAndConditions}.", false));
     list.add(PrivacyItem(
-        1, "${language.iHaveRead} Era's ${language.privacyAndPolicy}.", false));
+        1, "${language.iHaveRead} CycleM's ${language.privacyAndPolicy}.", false));
     list.add(PrivacyItem(
       2,
-      "${language.iAgreeTo} Era ${language.processingHealthData}.",
+      "${language.iAgreeTo} CycleM ${language.processingHealthData}.",
       false,
     ));
   }
@@ -45,9 +45,9 @@ class _PolicyScreenState extends State<PolicyScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(ic_logo, fit: BoxFit.fill, height: 100),
+          Image.asset(black_logo, fit: BoxFit.fill, height: 100),
           28.height,
-          Text("${language.youAndEra} Era", style: boldTextStyle(size: 24)),
+          Text("${language.youAndEra} CycleM", style: boldTextStyle(size: 24)),
           14.height,
           Text(
             "${language.policyDeclaration}.",

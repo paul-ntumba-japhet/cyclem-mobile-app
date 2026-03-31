@@ -1,16 +1,16 @@
-import 'dart:io';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../extensions/extension_util/context_extensions.dart';
-import '../../extensions/extension_util/date_time_extensions.dart';
 import '../../extensions/extensions.dart';
+import '../../extensions/new_colors.dart';
 import '../../main.dart';
 import '../../model/user/question_model.dart';
+import '../../model/user/user_models/user_model.dart';
 import '../../network/rest_api.dart';
-import '../../utils/utils.dart';
+import '../../utils/app_common.dart';
+import '../../utils/app_constants.dart';
+//import '../../extensions/app_text_field.dart';
 import '../screens.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -27,212 +27,272 @@ class _SignUpScreenState extends State<SignUpScreen> {
     logScreenView("SignUp screen");
   }
 
-  TextEditingController mFirstNameCount = TextEditingController();
-  TextEditingController mLastNameCount = TextEditingController();
-  TextEditingController mEmailCount = TextEditingController();
-  TextEditingController mPassCount = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
-  FocusNode mFNameFocus = FocusNode();
-  FocusNode mLNameFocus = FocusNode();
-  FocusNode mEmailFocus = FocusNode();
-  FocusNode mPassFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  final FocusNode _confirmPasswordFocus = FocusNode();
 
   @override
   void dispose() {
-    mEmailCount.dispose();
-    mPassCount.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _passwordFocus.dispose();
+    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<void> _handleSignUp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Get phone number from step2Phone
+    String? phoneNumber = questionsModel.step2Phone.phoneNumber;
+    String? countryCode = questionsModel.step2Phone.countryCode ?? "+1";
+
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      toast(language.phoneNumberNotFound);
+      return;
+    }
+
+    // Format phone number with country code
+    String fullPhoneNumber = '$countryCode$phoneNumber';
+    fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    if (!fullPhoneNumber.startsWith('+')) {
+      fullPhoneNumber = '+$fullPhoneNumber';
+    }
+
+    appStore.setLoading(true);
+
     try {
-      appStore.setLoading(true);
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+      final loginResult = await loginWithPhoneAndCode(
+        phoneNumber: fullPhoneNumber,
+        password: _passwordController.text.trim(),
       );
-      return await FirebaseAuth.instance.signInWithCredential(credential);
+
+      appStore.setLoading(false);
+
+      if (loginResult.status == false || loginResult.data == null) {
+        toast(loginResult.message ?? language.loginFailedPleaseCheckCredentials);
+        return;
+      }
+
+      final userModel = loginResult.data!;
+
+      // Set up user store for dashboard
+      userStore
+        ..setLogin(true)
+        ..setUserModelData(userModel)
+        ..setUserID(userModel.id!)
+        ..setUserPassword(_passwordController.text.trim())
+        ..setLoginUsertype(APP_USER)
+        ..setToken(userModel.apiToken!);
+
+      // Save data to local storage
+      saveUserToLocalStorage(userModel);
+      setValue(TOKEN, userModel.apiToken);
+      setValue(LASTNAME, userModel.lastName ?? "");
+      setValue(PASSWORD, _passwordController.text.trim());
+      setValue(IS_USER_SIGNED_UP, true);
+      setValue(USER_TYPE, APP_USER);
+      setValue(IS_LOGIN, true);
+
+      // Update configuration for dashboard
+      await _updateConfiguration(userModel);
+
+      // Navigate to loading screen with progress (0-100%)
+      SignupLoadingScreen().launch(context, isNewTask: true);
     } catch (e) {
-      printEraAppLogs('Error: $e');
-      return null;
+      appStore.setLoading(false);
+      toast(language.somethingWentWrong);
     }
   }
 
-  Future<void> proceedToRegisterApiCall() async {
-    try {
-      final credential = await signInWithGoogle();
-      if (credential?.user == null) return;
+  Future<void> _updateConfiguration(UserModel userModel) async {
+    // Update cycle and period settings from user model or question data
+    int cycleLength = userModel.cycleLength ?? 
+        questionsModel.step4.selectedOption ?? 
+        DEFAULT_CYCLE_LENGTH;
+    int periodLength = userModel.periodLength ?? 
+        questionsModel.step5.selectedOption ?? 
+        DEFAULT_PERIOD_LENGTH;
 
-      final user = credential!.user!;
-      final displayNameParts = user.displayName?.split(" ") ?? [];
-      final firstName = displayNameParts.isNotEmpty ? displayNameParts[0] : "";
-      final lastName =
-          displayNameParts.length > 1 ? displayNameParts[1] : "Foo";
-      final email = user.email ?? "";
-      final password = user.email;
-      final int age = questionsModel.step7.answerToQuestion2?.isNotEmpty == true
-          ? getCurrentAgeFromYear(
-              int.tryParse(questionsModel.step7.answerToQuestion2!)!)
-          : 0;
-
-      final map = getJSONAsync(KEY_QUESTION_DATA);
-      final questionsModelData = QuestionsModel.fromJson(map);
-      final step1 = questionsModelData.step1;
-      final step3 = questionsModelData.step3;
-      final step4 = questionsModelData.step4;
-      final step5 = questionsModelData.step5;
-      final step6 = questionsModelData.step6;
-
-      final req = {
-        "first_name": firstName,
-        "last_name": lastName,
-        "age": age,
-        "email": email,
-        "password": password,
-        "goal_type": step1.selectedOption == -1 ? 0 : step1.selectedOption,
-        "user_type": "app_user",
-        "period_start_date": step3.selectedLastPeriodDate!.isEmpty
-            ? getDateTimeString(DateTime.now())
-            : step3.selectedLastPeriodDate.toString(),
-        "cycle_length": step4.selectedOption,
-        "period_length": step5.selectedOption,
-        "luteal_phase": step6.selectedOption != -1 ? step6.selectedOption : 0,
-      };
-
-      final registerResult = await registerApi(req);
-
-      registerResult.fold(
-        (errorResponse) {
-          toast(errorResponse.message ?? "Registration failed");
-        },
-        (userModel) {
-          userStore
-            ..setLogin(true)
-            ..setUserModelData(userModel)
-            ..setUserID(userModel.id!)
-            ..setUserPassword(password!)
-            ..setLoginUsertype(APP_USER)
-            ..setUserModelData(userModel)
-            ..setToken(userModel.apiToken!);
-
-          // Save data to local storage
-          saveUserToLocalStorage(userModel);
-          setValue(TOKEN, userModel.apiToken);
-          setValue(LASTNAME, userModel.lastName);
-          setValue(PASSWORD, password);
-          setValue(IS_USER_SIGNED_UP, true);
-
-          DashboardScreen(currentIndex: 0).launch(context);
-        },
-      );
-    } catch (e) {
-      toast(e.toString());
-      rethrow;
-    } finally {
-      appStore.setLoading(false);
+    if (cycleLength == 0) {
+      cycleLength = DEFAULT_CYCLE_LENGTH;
     }
+    if (periodLength == 0) {
+      periodLength = DEFAULT_PERIOD_LENGTH;
+    }
+
+    // Set in userStore and SharedPreferences
+    userStore.setCycleLength(cycleLength);
+    userStore.setPeriodsLength(periodLength);
+    setValue(CYCLE_LENGTH, cycleLength);
+    setValue(PERIOD_LENGTH, periodLength);
+
+    // The full updateConfiguration (including menstrual cycle widget) 
+    // will be handled by the DashboardScreen when it initializes
+    // No need to call it here as it requires MenstrualCycleWidget.instance
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: mainColorLight,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: mainColorText),
+          onPressed: () => finish(context),
+        ),
+        title: Text(
+          language.completeRegistration,
+          style: boldTextStyle(
+            color: mainColorText,
+            size: 18,
+            weight: FontWeight.w500,
+          ),
+        ),
+      ),
       body: Observer(
         builder: (context) {
+          // Explicitly observe language changes to ensure rebuild
+          final _ = appStore.selectedLanguage;
           return Stack(
             children: [
-              Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Wrap(
+              SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        decoration: boxDecorationWithRoundedCorners(
-                            borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16))),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Align(
-                                alignment: Alignment.topLeft,
-                                child: Icon(Icons.close, size: 25).onTap(() {
-                                  finish(context);
-                                })),
-                            Text("${language.keepYourHealthDataSafe}",
-                                style: boldTextStyle(size: textFontSize_20)),
-                            8.height,
-                            Text(language.createYourAccountToSaveInformation,
-                                style: secondaryTextStyle(),
-                                textAlign: TextAlign.center),
-                            30.height,
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              decoration: boxDecorationWithRoundedCorners(
-                                  borderRadius: BorderRadius.circular(20),
-                                  backgroundColor:
-                                      Colors.grey.withValues(alpha: 0.2)),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(ic_google,
-                                      height: 20,
-                                      width: 20,
-                                      color: Colors.black),
-                                  10.width,
-                                  Text(language.continueWithGoogle,
-                                      style:
-                                          boldTextStyle(size: textFontSize_14))
-                                ],
-                              ).center(),
-                            ).onTap(() {
-                              proceedToRegisterApiCall();
-                            }),
-                            16.height,
-                            if (Platform.isIOS) ...[
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 10),
-                                decoration: boxDecorationWithRoundedCorners(
-                                    borderRadius: BorderRadius.circular(20),
-                                    backgroundColor:
-                                        Colors.grey.withValues(alpha: 0.2)),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.email, size: 20),
-                                    10.width,
-                                    Text(language.continueWithApple,
-                                        style: boldTextStyle(
-                                            size: textFontSize_16))
-                                  ],
-                                ).center(),
-                              ),
-                            ],
-                            16.height,
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Text(language.iWillRegisterLater,
-                                      style: boldTextStyle(
-                                          color: gray, size: textFontSize_14))
-                                  .onTap(() {
-                                ProgressScreen()
-                                    .launch(context, isNewTask: true);
-                              }),
-                            ),
-                            16.height,
-                          ],
-                        ).paddingOnly(
-                            left: 16, right: 16, top: context.statusBarHeight),
+                      // Description
+                      Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Text(
+                          language.enterYourPassword,
+                          style: boldTextStyle(
+                            color: mainColorText,
+                            weight: FontWeight.w400,
+                            size: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
+                      32.height,
+
+                      // Password Field
+                      Text(
+                        language.password,
+                        style: boldTextStyle(
+                          color: mainColorText,
+                          weight: FontWeight.w500,
+                          size: 14,
+                        ),
+                      ),
+                      8.height,
+                      AppTextField(
+                        controller: _passwordController,
+                        textFieldType: TextFieldType.PASSWORD,
+                        focus: _passwordFocus,
+                        nextFocus: _confirmPasswordFocus,
+                        decoration: InputDecoration(
+                          hintText: language.enterYourPassword,
+                          labelText: language.password,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: gray.withOpacity(0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: gray.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: primaryColor, width: 2),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        isValidationRequired: true,
+                        errorThisFieldRequired: language.pleaseEnterPassword,
+                        errorMinimumPasswordLength: language.passwordMustHaveAtLeastSixCharacters,
+                      ),
+                      24.height,
+
+                      // Confirm Password Field
+                      Text(
+                        language.confirmPassword,
+                        style: boldTextStyle(
+                          color: mainColorText,
+                          weight: FontWeight.w500,
+                          size: 14,
+                        ),
+                      ),
+                      8.height,
+                      AppTextField(
+                        controller: _confirmPasswordController,
+                        textFieldType: TextFieldType.PASSWORD,
+                        focus: _confirmPasswordFocus,
+                        decoration: InputDecoration(
+                          hintText: language.confirmYourPassword,
+                          labelText: language.confirmPassword,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: gray.withOpacity(0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: gray.withOpacity(0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: primaryColor, width: 2),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        isValidationRequired: true,
+                        errorThisFieldRequired: language.pleaseConfirmPassword,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return language.pleaseConfirmPassword;
+                          }
+                          if (value != _passwordController.text.trim()) {
+                            return language.passwordsDoNotMatch;
+                          }
+                          return null;
+                        },
+                      ),
+                      32.height,
+
+                      // Sign Up Button
+                      AppButton(
+                        text: language.completeRegistration,
+                        width: context.width(),
+                        onTap: _handleSignUp,
+                      ),
+                      24.height,
                     ],
-                  )),
+                  ),
+                ),
+              ),
               if (appStore.isLoading)
                 Center(
                   child: Loader(),

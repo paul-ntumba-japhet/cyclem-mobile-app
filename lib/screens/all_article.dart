@@ -132,13 +132,13 @@ class _AllArticlesScreenState extends State<AllArticlesScreen> {
         });
       } else {
         setState(() {
-          errorMessage = 'No articles found.';
+          errorMessage = language.noArticlesFound;
           hasMorePages = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Failed to load articles: $e';
+        errorMessage = '${language.failedToLoadArticles}: $e';
         hasMorePages = false;
       });
       throw e;
@@ -153,7 +153,7 @@ class _AllArticlesScreenState extends State<AllArticlesScreen> {
 
   Future<void> updateBookmarkStatus(int index) async {
     if (articles[index].id == null) {
-      toast("Invalid article ID");
+      toast(language.invalidArticleId);
       return;
     }
     bool newBookmarkStatus = articles[index].bookmark != 1;
@@ -172,7 +172,7 @@ class _AllArticlesScreenState extends State<AllArticlesScreen> {
         toast(value.message);
       }
     } catch (e) {
-      toast("Error updating bookmark");
+      toast(language.errorUpdatingBookmark);
       throw e;
     } finally {
       appStore.setLoading(false);
@@ -200,8 +200,8 @@ class _AllArticlesScreenState extends State<AllArticlesScreen> {
                   titleSpacing: 0,
                   title: Text(
                     widget.tagsId != null
-                        ? 'Articles based on ${widget.tagName?.capitalizeFirstLetter() ?? 'Tag'}'
-                        : 'All Articles',
+                        ? '${language.articlesBasedOn} ${widget.tagName?.capitalizeFirstLetter() ?? language.tag}'
+                        : language.allArticles,
                     style: widget.boldTextStyle.copyWith(
                       color: mainColorText,
                       fontSize: 16,
@@ -391,7 +391,7 @@ class BlogItem extends StatelessWidget {
                       width: 16, height: 16, color: mainColorText),
                   4.width,
                   Text(
-                    article!.expertData?.name.toString() ?? 'Unknown',
+                    article!.expertData?.name.toString() ?? language.Unknown,
                     style: primaryTextStyle(
                         color: mainColorText, size: textFontSize_12),
                   ),

@@ -12,6 +12,7 @@ import '../../extensions/LiveStream.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extensions.dart';
 import '../../main.dart';
+import '../../network/rest_api.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
@@ -53,7 +54,7 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
   QuestionsModel getInitializedQuestionsModel() {
     return QuestionsModel(
       step1: Step1(
-        title: "Are you using Era for yourself?",
+        title: "Are you using CycleM for yourself?",
         options: [
           "Yes, for tracking my cycle.",
           "Yes, as a doctor.",
@@ -70,6 +71,33 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
         selectedOption: 0,
         isSkip: false,
         isConfirm: true,
+      ),
+      step2Phone: Step2Phone(
+        phoneNumber: null,
+        countryCode: "+1",
+        verificationId: null,
+        isVerified: false,
+        otpCode: null,
+      ),
+      step3PersonalInfo: Step3PersonalInfo(
+        fullName: null,
+        email: null,
+        isCompleted: false,
+      ),
+      step4Question1: Step4Question1(
+        question: "Do you have any existing health conditions?",
+        answer: null,
+        isCompleted: false,
+      ),
+      step4Question2: Step4Question2(
+        question: "Are you currently taking any medications?",
+        answer: null,
+        isCompleted: false,
+      ),
+      step4Question3: Step4Question3(
+        question: "Have you consulted a doctor about your cycle recently?",
+        answer: null,
+        isCompleted: false,
       ),
       step3: Step3(
         title: "When was your last period?",
@@ -104,11 +132,10 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
       step7: Step7(
         title: "Complete Your Profile",
         desc:
-            "Help us personalize your experience by providing some basic information",
-        question1: "What is your full name?",
-        question2: "What is your age?",
-        answerToQuestion1: "",
-        // Will be filled by user input
+            "Help us personalize your experience by providing your age",
+        question1: null, // Name is now collected in Step 4 (step3PersonalInfo)
+        question2: "What year were you born?",
+        answerToQuestion1: null,
         answerToQuestion2: "",
         // Will be filled by user input
         confirm: true,
@@ -280,8 +307,14 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
                             questionsModelData!.step4.selectedOption =
                                 selectedValue;
                             userStore.setCycleLength(selectedValue);
-                            setValue(KEY_QUESTION_DATA,
-                                jsonEncode(questionsModelData!.toJson()));
+                            // Save to phone-specific key only
+                            String? phoneNumber = userStore.user?.phoneNumber;
+                            if (phoneNumber != null && phoneNumber.isNotEmpty) {
+                              String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+                              if (phoneForAPI.isNotEmpty) {
+                                saveQuestionDataForPhone(phoneForAPI, questionsModelData!);
+                              }
+                            }
                             updateConfiguration();
                           } else if (index == 1) {
                             final selectedValue =
@@ -289,8 +322,14 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
                             questionsModelData!.step5.selectedOption =
                                 selectedValue;
                             userStore.setPeriodsLength(selectedValue);
-                            setValue(KEY_QUESTION_DATA,
-                                jsonEncode(questionsModelData!.toJson()));
+                            // Save to phone-specific key only
+                            String? phoneNumber = userStore.user?.phoneNumber;
+                            if (phoneNumber != null && phoneNumber.isNotEmpty) {
+                              String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+                              if (phoneForAPI.isNotEmpty) {
+                                saveQuestionDataForPhone(phoneForAPI, questionsModelData!);
+                              }
+                            }
                             updateConfiguration();
                           } else if (index == 2) {
                             final selectedValue =
@@ -298,8 +337,14 @@ class PeriodPredictionsScreenState extends State<PeriodPredictionsScreen> {
                             questionsModelData!.step6.selectedOption =
                                 selectedValue;
                             userStore.setLutealPhase(selectedValue);
-                            setValue(KEY_QUESTION_DATA,
-                                jsonEncode(questionsModelData!.toJson()));
+                            // Save to phone-specific key only
+                            String? phoneNumber = userStore.user?.phoneNumber;
+                            if (phoneNumber != null && phoneNumber.isNotEmpty) {
+                              String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+                              if (phoneForAPI.isNotEmpty) {
+                                saveQuestionDataForPhone(phoneForAPI, questionsModelData!);
+                              }
+                            }
                             updateConfiguration();
                           }
                           LiveStream().emit("predictionDataUpdate");

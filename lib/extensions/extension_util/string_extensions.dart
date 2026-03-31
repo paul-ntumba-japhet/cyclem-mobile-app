@@ -148,6 +148,20 @@ extension StringExtension on String? {
     return '';
   }
 
+  /// Masks phone number for display (keeps first 2 and last 2 digits, masks the rest with 'x')
+  /// Example: "1234567890" -> "12xxxxxx90"
+  String maskPhoneNumber() {
+    String phone = this.validate();
+    if (phone.isEmpty || phone.length < 4) {
+      return phone;
+    }
+    // Keep first 2 digits and last 2 digits, mask the rest
+    String firstPart = phone.substring(0, 2);
+    String lastPart = phone.substring(phone.length - 2);
+    String maskedMiddle = 'x' * (phone.length - 4);
+    return '$firstPart$maskedMiddle$lastPart';
+  }
+
   /// Splits from a [pattern] and returns String before that
   String splitBefore(Pattern pattern) {
     ArgumentError.checkNotNull(pattern, 'pattern');

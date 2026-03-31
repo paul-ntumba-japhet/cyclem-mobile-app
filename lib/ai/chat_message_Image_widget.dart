@@ -14,12 +14,14 @@ class ChatMessageWidget extends StatefulWidget {
   final QuestionAnswerModel data;
   final bool isLoading;
   final String firstQuestion;
+  final Function(String)? onSmartReplyTap;
 
   ChatMessageWidget({
     required this.answer,
     required this.data,
     required this.isLoading,
     required this.firstQuestion,
+    this.onSmartReplyTap,
   });
 
   @override
@@ -90,6 +92,39 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         style:
                             secondaryTextStyle(color: Colors.black26, size: 12),
                       ),
+                      // Display smart replies if available
+                      if (widget.data.smartReplies != null && widget.data.smartReplies!.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: widget.data.smartReplies!.map((reply) {
+                              return ElevatedButton(
+                                onPressed: () {
+                                  // Send the smart reply as a user message
+                                  if (widget.onSmartReplyTap != null) {
+                                    widget.onSmartReplyTap!(reply);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: primaryColor,
+                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(color: primaryColor, width: 1.5),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  reply,
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
                     ],
                   ),
                 ),

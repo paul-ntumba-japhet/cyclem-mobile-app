@@ -98,7 +98,18 @@ List<Locale> getSupportedLocales() {
 String getContentValueFromKey(int keywordId) {
   String defaultKeyValue = defaultKeyNotFoundValue;
   bool isFoundKey = false;
-  if (selectedServerLanguageData != null) {
+  
+  // Priority 1: Check JSON file data first (local translations)
+  for (int index = 0; index < defaultLanguageDataKeys.length; index++) {
+    if (defaultLanguageDataKeys[index].keywordId == keywordId) {
+      defaultKeyValue = defaultLanguageDataKeys[index].keywordValue!;
+      isFoundKey = true;
+      break;
+    }
+  }
+  
+  // Priority 2: Fallback to server data if not found in JSON files
+  if (!isFoundKey && selectedServerLanguageData != null) {
     for (int index = 0;
         index < selectedServerLanguageData!.contentData!.length;
         index++) {
@@ -110,15 +121,8 @@ String getContentValueFromKey(int keywordId) {
         break;
       }
     }
-  } else {
-    for (int index = 0; index < defaultLanguageDataKeys.length; index++) {
-      if (defaultLanguageDataKeys[index].keywordId == keywordId) {
-        defaultKeyValue = defaultLanguageDataKeys[index].keywordValue!;
-        isFoundKey = true;
-        break;
-      }
-    }
   }
+  
   if (!isFoundKey) {
     defaultKeyValue = defaultKeyValue + "($keywordId)";
   }
@@ -126,21 +130,67 @@ String getContentValueFromKey(int keywordId) {
 }
 
 initJsonFile() async {
-  final String jsonString =
-      await rootBundle.loadString('assets/staticjson/keyword_list.json');
-  final list = json.decode(jsonString) as List;
-  List<LocalLanguageResponse> finalList = list
-      .map((jsonElement) => LocalLanguageResponse.fromJson(jsonElement))
-      .toList();
-  defaultLanguageDataKeys.clear();
-  for (int index = 0; index < finalList.length; index++) {
-    for (int i = 0; i < finalList[index].keywordData!.length; i++) {
-      defaultLanguageDataKeys.add(
-        prefix1.ContentData(
-            keywordId: finalList[index].keywordData![i].keywordId,
-            keywordName: finalList[index].keywordData![i].keywordName,
-            keywordValue: finalList[index].keywordData![i].keywordValue),
-      );
+  String langCode = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode);
+  
+  // Determine which JSON file to load based on language code
+  String jsonFileName;
+  switch (langCode.toLowerCase()) {
+    case 'fr':
+      jsonFileName = 'assets/staticjson/keyword_list_fr.json';
+      break;
+    case 'en':
+    default:
+      jsonFileName = 'assets/staticjson/keyword_list_en.json';
+      break;
+  }
+
+  try {
+    // Use the determined jsonFileName instead of hardcoded English file
+    final String jsonString = await rootBundle.loadString(jsonFileName);
+    final list = json.decode(jsonString) as List;
+    List<LocalLanguageResponse> finalList = list
+        .map((jsonElement) => LocalLanguageResponse.fromJson(jsonElement))
+        .toList();
+    defaultLanguageDataKeys.clear();
+    for (int index = 0; index < finalList.length; index++) {
+      if (finalList[index].keywordData != null) {
+        for (int i = 0; i < finalList[index].keywordData!.length; i++) {
+          defaultLanguageDataKeys.add(
+            prefix1.ContentData(
+                keywordId: finalList[index].keywordData![i].keywordId,
+                keywordName: finalList[index].keywordData![i].keywordName,
+                keywordValue: finalList[index].keywordData![i].keywordValue),
+          );
+        }
+      }
+    }
+    print('Successfully loaded language file: $jsonFileName (${defaultLanguageDataKeys.length} keywords)');
+  } catch (e) {
+    print('Error loading language file $jsonFileName: $e');
+    print('Falling back to English...');
+    try {
+      final String jsonString = 
+          await rootBundle.loadString('assets/staticjson/keyword_list_en.json');
+      final list = json.decode(jsonString) as List;
+      List<LocalLanguageResponse> finalList = list
+          .map((jsonElement) => LocalLanguageResponse.fromJson(jsonElement))
+          .toList();
+      defaultLanguageDataKeys.clear();
+      for (int index = 0; index < finalList.length; index++) {
+        if (finalList[index].keywordData != null) {
+          for (int i = 0; i < finalList[index].keywordData!.length; i++) {
+            defaultLanguageDataKeys.add(
+              prefix1.ContentData(
+                  keywordId: finalList[index].keywordData![i].keywordId,
+                  keywordName: finalList[index].keywordData![i].keywordName,
+                  keywordValue: finalList[index].keywordData![i].keywordValue),
+            );
+          }
+        }
+      }
+      print('Successfully loaded fallback English file (${defaultLanguageDataKeys.length} keywords)');
+    } catch (fallbackError) {
+      print('Error loading fallback English file: $fallbackError');
     }
   }
 }

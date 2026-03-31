@@ -202,7 +202,7 @@ class _MenstrualReportScreenState extends State<MenstrualReportScreen> {
       try {
         final pdfBytes = await generatePdf();
         final directory = await getApplicationDocumentsDirectory();
-        final folderPath = '${directory.path}/Era Reports';
+        final folderPath = '${directory.path}/CycleM Reports';
         final folder = Directory(folderPath);
 
         await folder.create(recursive: true);

@@ -10,8 +10,6 @@ import 'package:era_flutter/screens/user/period_prediction_screen.dart';
 import 'package:era_flutter/screens/user/processing_screen.dart';
 import 'package:era_flutter/screens/user/reminders/cycle_reminder_screen.dart';
 import 'package:era_flutter/screens/user/reminders/deafult_reminder_setting_screen.dart';
-import 'package:era_flutter/screens/user/reminders/secret_reminder_screen.dart';
-import 'package:era_flutter/screens/user/secret_chat_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +17,10 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:terminate_restart/terminate_restart.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:intl/intl.dart';
+import '../../languageConfiguration/LanguageDataConstant.dart';
+import '../../languageConfiguration/LanguageDefaultJson.dart';
 
 import '../../components/common/settings_components.dart';
 import '../../extensions/colors.dart';
@@ -39,10 +41,7 @@ import 'faq_screen.dart';
 import 'home_screen.dart';
 import 'user_edit_profile_screen.dart';
 import 'ask_expert_list_screen.dart';
-import 'bookmark_screen.dart';
-import 'calculator/calculator_screen.dart';
 import 'user_dashboard_screen.dart';
-import 'graphs_reports_screen.dart';
 import '../../model/reminder_model.dart';
 
 class SettingScreen extends StatefulWidget {
@@ -92,6 +91,153 @@ class _SettingScreenState extends State<SettingScreen>
       return '${_periodReminderSubtitle}, ${_ovulationReminderSubtitle}';
     }
     return _periodReminderSubtitle ?? _ovulationReminderSubtitle;
+  }
+
+  /// Test notification function to verify notification system works
+  Future<void> _testNotification() async {
+    try {
+      // Check notification permissions first
+      bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+      
+      if (!isAllowed) {
+        // Request permission
+        bool? allowed = await AwesomeNotifications().requestPermissionToSendNotifications();
+        if (allowed == false) {
+          if (mounted) {
+            toast(language.notificationsNotAllowed);
+          }
+          return;
+        }
+      }
+      
+      // Cancel any existing test notification
+      await AwesomeNotifications().cancel(9999);
+      
+      // Create a test notification that will be shown immediately
+      // Using schedule: null will show it immediately
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 9999, // Use a high ID that won't conflict with other notifications
+          channelKey: 'basic_channel',
+          title: language.testNotificationTitle,
+          body: language.testNotificationBody,
+          notificationLayout: NotificationLayout.Default,
+          wakeUpScreen: true,
+          category: NotificationCategory.Message,
+        ),
+        // No schedule means immediate notification
+      );
+      
+      // Show success message
+      if (mounted) {
+        toast(language.testNotificationSent);
+      }
+      
+      print('✅ Test notification created successfully');
+    } catch (e, stackTrace) {
+      print('❌ Error sending test notification: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        toast(language.testNotificationError.replaceAll('{error}', e.toString()));
+      }
+    }
+  }
+
+  /// Show all scheduled notifications in a dialog
+  Future<void> _showAllNotifications() async {
+    try {
+      List<Map<String, dynamic>> notifications = await getAllScheduledNotifications();
+      
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              language.scheduledNotifications.replaceAll('{count}', notifications.length.toString()),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            content: notifications.isEmpty
+                ? Text(
+                    language.noScheduledNotifications,
+                    style: TextStyle(fontSize: 14),
+                  )
+                : Container(
+                    width: double.maxFinite,
+                    constraints: BoxConstraints(maxHeight: 400),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: notifications.length,
+                      itemBuilder: (context, index) {
+                        final notification = notifications[index];
+                        return Card(
+                          margin: EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            title: Text(
+                              notification['title'] ?? language.noTitle,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (notification['body'] != null && notification['body'].toString().isNotEmpty)
+                                  Padding(
+                                    padding: EdgeInsets.only(top: 4, bottom: 4),
+                                    child: Text(
+                                      notification['body'],
+                                      style: TextStyle(fontSize: 12),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                Text(
+                                  notification['schedule'] ?? language.notScheduled,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(Icons.delete_outline, size: 20),
+                              onPressed: () async {
+                                int? id = notification['id'] as int?;
+                                if (id != null) {
+                                  await AwesomeNotifications().cancel(id);
+                                  if (mounted) {
+                                    Navigator.of(context).pop();
+                                    _showAllNotifications(); // Refresh the list
+                                    toast(language.notificationDeleted);
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(language.close),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      print('❌ Error showing notifications: $e');
+      if (mounted) {
+        toast(language.errorLoadingNotifications.replaceAll('{error}', e.toString()));
+      }
+    }
   }
 
   // List of all reminder indices
@@ -183,7 +329,7 @@ class _SettingScreenState extends State<SettingScreen>
       case REMINDER_BODY_TEMPRATURE_INDEX:
         return language.bodyTemperatureReminders.toLowerCase();
       default:
-        return 'Reminder';
+        return language.reminderDefault;
     }
   }
 
@@ -272,13 +418,74 @@ class _SettingScreenState extends State<SettingScreen>
       } else {
         goalType = getIntAsync(GOAL);
       }
+      
       if (userType == ANONYMOUS) {
+        // For anonymous users, use global key
         Map<String, dynamic> map = getJSONAsync(KEY_QUESTION_DATA);
         questionsModelData = QuestionsModel.fromJson(map);
+      } else if (userType == APP_USER) {
+        // For app users, load by phone number
+        String? phoneNumber = userStore.user?.phoneNumber;
+        if (phoneNumber != null && phoneNumber.isNotEmpty) {
+          String phoneForAPI = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+          QuestionsModel? loadedData = loadQuestionDataForPhone(phoneForAPI);
+          if (loadedData != null) {
+            questionsModelData = loadedData;
+          } else {
+            // Fallback to global key for backward compatibility
+            Map<String, dynamic> map = getJSONAsync(KEY_QUESTION_DATA);
+            if (map.isNotEmpty) {
+              questionsModelData = QuestionsModel.fromJson(map);
+            } else {
+              // Default initialization if no data found
+              questionsModelData = QuestionsModel(
+                step1: step1,
+                step2: step2,
+                step2Phone: step2Phone,
+                step3PersonalInfo: step3PersonalInfo,
+                step4Question1: step4Question1,
+                step4Question2: step4Question2,
+                step4Question3: step4Question3,
+                step3: step3,
+                step4: step4,
+                step5: step5,
+                step6: step6,
+                step7: step7,
+              );
+            }
+          }
+        } else {
+          // No phone number, use global key or defaults
+          Map<String, dynamic> map = getJSONAsync(KEY_QUESTION_DATA);
+          if (map.isNotEmpty) {
+            questionsModelData = QuestionsModel.fromJson(map);
+          } else {
+            questionsModelData = QuestionsModel(
+              step1: step1,
+              step2: step2,
+              step2Phone: step2Phone,
+              step3PersonalInfo: step3PersonalInfo,
+              step4Question1: step4Question1,
+              step4Question2: step4Question2,
+              step4Question3: step4Question3,
+              step3: step3,
+              step4: step4,
+              step5: step5,
+              step6: step6,
+              step7: step7,
+            );
+          }
+        }
       } else {
+        // Default initialization
         questionsModelData = QuestionsModel(
           step1: step1,
           step2: step2,
+          step2Phone: step2Phone,
+          step3PersonalInfo: step3PersonalInfo,
+          step4Question1: step4Question1,
+          step4Question2: step4Question2,
+          step4Question3: step4Question3,
           step3: step3,
           step4: step4,
           step5: step5,
@@ -313,6 +520,31 @@ class _SettingScreenState extends State<SettingScreen>
       appStore.setLoading(false);
       toast(error.toString());
     });
+  }
+
+  /// Clear IK chatbot chat history
+  Future<void> clearChatHistory() async {
+    try {
+      // Clear IK chatbot history (phone-specific and general)
+      String? phone = userStore.user?.phoneNumber;
+      if (phone != null && phone.isNotEmpty) {
+        String digitsOnly = phone.replaceAll(RegExp(r'[^\d]'), '');
+        if (digitsOnly.isNotEmpty) {
+          await removeKey('CHAT_MESSAGES_HISTORY_$digitsOnly');
+        }
+      }
+      // Also try to clear general key if exists
+      await removeKey('CHAT_MESSAGES_HISTORY');
+      
+      if (mounted) {
+        toast(language.chatHistoryClearedSuccess);
+      }
+    } catch (e) {
+      print('Error clearing chat history: $e');
+      if (mounted) {
+        toast('${language.errorClearingChatHistory}: ${e.toString()}');
+      }
+    }
   }
 
   Widget settingOption(String mTitle, Function onTapCall, IconData icon) {
@@ -465,6 +697,8 @@ class _SettingScreenState extends State<SettingScreen>
       length: goalList.length,
       child: Observer(
         builder: (context) {
+          // Access appStore.selectedLanguage to ensure Observer tracks language changes
+          appStore.selectedLanguage;
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle(
               statusBarColor: mainColorLight,
@@ -585,6 +819,58 @@ class _SettingScreenState extends State<SettingScreen>
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                   ),
+                                                  4.height,
+                                                  if (userStore.user?.phoneNumber != null && 
+                                                      userStore.user!.phoneNumber!.isNotEmpty)
+                                                    Text(
+                                                      '${language.phoneNumber}: ${userStore.user!.phoneNumber}',
+                                                      style: primaryTextStyle(
+                                                        color: mainColorBodyText,
+                                                        size: 12,
+                                                        weight: FontWeight.w400,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  4.height,
+                                                  if (userLastPeriodDate != null && 
+                                                      userLastPeriodDate!.isNotEmpty)
+                                                    Builder(
+                                                      builder: (context) {
+                                                        try {
+                                                          final locale = getStringAsync(
+                                                            SELECTED_LANGUAGE_CODE, 
+                                                            defaultValue: defaultLanguageCode
+                                                          );
+                                                          final date = DateTime.parse(userLastPeriodDate!);
+                                                          final formattedDate = DateFormat('dd MMMM yyyy', locale).format(date);
+                                                          return Text(
+                                                            '${language.lastPeriodDate}: $formattedDate',
+                                                            style: primaryTextStyle(
+                                                              color: mainColorBodyText,
+                                                              size: 12,
+                                                              weight: FontWeight.w400,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow.ellipsis,
+                                                          );
+                                                        } catch (e) {
+                                                          return Text(
+                                                            '${language.lastPeriodDate}: $userLastPeriodDate',
+                                                            style: primaryTextStyle(
+                                                              color: mainColorBodyText,
+                                                              size: 12,
+                                                              weight: FontWeight.w400,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow.ellipsis,
+                                                          );
+                                                        }
+                                                      },
+                                                    ),
                                                 ],
                                               ),
                                             ),
@@ -717,13 +1003,6 @@ class _SettingScreenState extends State<SettingScreen>
                               Column(
                                 children: [
                                   mSettingOption(
-                                      language.graphsAndReport, ic_chart, () {
-                                    GraphsAndReportScreen(
-                                            shouldShowBackButton: true)
-                                        .launch(context);
-                                  }),
-                                  10.height,
-                                  mSettingOption(
                                       language.periodPrediction, ic_graph, () {
                                     PeriodPredictionsScreen().launch(context);
                                   }),
@@ -750,7 +1029,7 @@ class _SettingScreenState extends State<SettingScreen>
                                                             isNewTask: true);
                                                   }, onError: () {
                                                     toast(
-                                                        "Something went wrong");
+                                                        language.somethingWentWrong);
                                                   });
                                                 }),
                                       10.height,
@@ -758,10 +1037,6 @@ class _SettingScreenState extends State<SettingScreen>
                                   ).visible(appStore.dummyDataStatus == true)
                                 ],
                               ).visible(userStore.goalIndex == 0),
-                              mSettingOption(language.secretChat, ic_crown, () {
-                                SecretChatScreen().launch(context);
-                              }),
-                              10.height,
                               Column(
                                 children: [
                                   mSettingOption(
@@ -771,19 +1046,6 @@ class _SettingScreenState extends State<SettingScreen>
                                   10.height,
                                 ],
                               ).visible(appStore.askExpertStatus == true),
-                              mSettingOption(language.bookmark, ic_bookmark2,
-                                  () {
-                                BookmarkScreen().launch(context,
-                                    shouldCheckForNetworkConnection: true);
-                              }),
-                              10.height,
-                              mSettingOption(
-                                  language.calculatorTools, ic_calculator, () {
-                                CalculatorScreen(isFromDoctor: false).launch(
-                                    context,
-                                    shouldCheckForNetworkConnection: true);
-                              }),
-                              10.height,
                               // Reminders Container
                               Container(
                                 padding: EdgeInsets.symmetric(

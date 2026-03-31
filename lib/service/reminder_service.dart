@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import '../model/reminder_model.dart';
+import '../model/user/cycle_info_model.dart';
 import '../utils/app_constants.dart';
 
 const REMINDER_MEDICINE_INDEX = 1;
@@ -19,6 +20,10 @@ const REMINDER_SLEEP_INDEX = 8;
 const REMINDER_DRINK_WATER_INDEX = 9;
 const REMINDER_BODY_TEMPRATURE_INDEX = 10;
 const REMINDER_LOG_WEIGHT_INDEX = 11;
+// New indices for cycle stage notifications
+const REMINDER_FERTILE_WINDOW_START_INDEX = 12;
+const REMINDER_FERTILE_WINDOW_END_INDEX = 13;
+const REMINDER_DAY_27_INDEX = 14;
 
 const REMINDER_TYPE_DAILY = 1;
 const REMINDER_TYPE_WEEKLY = 2;
@@ -518,4 +523,230 @@ Future<String?> getReminderTitle(int index) async {
 Future<void> clearReminder(int index) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove('reminder_msg_$index');
+}
+
+/// Parse date string to DateTime
+/// Supports both "yyyy-MM-dd" and "dd-MM-yyyy" formats
+DateTime? _parseDate(String? dateString) {
+  if (dateString == null || dateString.isEmpty) {
+    return null;
+  }
+  
+  try {
+    if (dateString.contains('-')) {
+      List<String> parts = dateString.split('-');
+      if (parts.length == 3) {
+        // Try dd-MM-yyyy first
+        if (parts[0].length == 2) {
+          return DateTime.parse('${parts[2]}-${parts[1]}-${parts[0]}');
+        } else {
+          // yyyy-MM-dd format
+          return DateTime.parse(dateString);
+        }
+      }
+    }
+    // Try parsing as-is
+    return DateTime.parse(dateString);
+  } catch (e) {
+    print('Error parsing date: $dateString - $e');
+    return null;
+  }
+}
+
+/// Schedule notification for a specific date and time
+/// This creates a one-time notification (does not repeat)
+Future<void> scheduleCycleStageNotification({
+  required int notificationId,
+  required DateTime notificationDate,
+  required String title,
+  required String body,
+}) async {
+  try {
+    // Cancel any existing notification with this ID
+    await AwesomeNotifications().cancel(notificationId);
+    
+    // Check if date has passed
+    if (isDatePassed(notificationDate)) {
+      print('⚠️ Notification date has passed: $notificationDate');
+      return;
+    }
+    
+    // Schedule the notification
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: notificationId,
+        channelKey: 'basic_channel',
+        title: title,
+        body: body,
+        notificationLayout: NotificationLayout.Default,
+      ),
+      schedule: NotificationCalendar(
+        year: notificationDate.year,
+        month: notificationDate.month,
+        day: notificationDate.day,
+        hour: notificationDate.hour,
+        minute: notificationDate.minute,
+        second: 0,
+        repeats: false, // One-time notification
+      ),
+    );
+    
+    print('✅ Scheduled notification: $title on ${notificationDate.toString()}');
+  } catch (e) {
+    print('❌ Error scheduling notification: $e');
+  }
+}
+
+/// Schedule notifications for key menstrual cycle stages
+/// This should be called when cycle info is updated
+Future<void> scheduleCycleStageNotifications() async {
+  try {
+    // Get cycle info from userStore
+    CycleInfoModel? cycleInfo = userStore.cycleInfo;
+    
+    if (cycleInfo == null) {
+      print('⚠️ Cannot schedule cycle notifications: cycle info is null');
+      return;
+    }
+    
+    // Default notification time (9:00 AM)
+    const defaultHour = 9;
+    const defaultMinute = 0;
+    
+    // 1. Schedule notification for fertile window start
+    if (cycleInfo.dateFertiStart != null && cycleInfo.dateFertiStart!.isNotEmpty) {
+      DateTime? fertileStart = _parseDate(cycleInfo.dateFertiStart);
+      if (fertileStart != null) {
+        DateTime notificationDate = DateTime(
+          fertileStart.year,
+          fertileStart.month,
+          fertileStart.day,
+          defaultHour,
+          defaultMinute,
+        );
+        
+        await scheduleCycleStageNotification(
+          notificationId: REMINDER_FERTILE_WINDOW_START_INDEX,
+          notificationDate: notificationDate,
+          title: language.fertileWindowStart,
+          body: language.fertileWindowStartBody,
+        );
+      }
+    }
+    
+    // 2. Schedule notification for fertile window end
+    if (cycleInfo.dateFertireqEnd != null && cycleInfo.dateFertireqEnd!.isNotEmpty) {
+      DateTime? fertileEnd = _parseDate(cycleInfo.dateFertireqEnd);
+      if (fertileEnd != null) {
+        DateTime notificationDate = DateTime(
+          fertileEnd.year,
+          fertileEnd.month,
+          fertileEnd.day,
+          defaultHour,
+          defaultMinute,
+        );
+        
+        await scheduleCycleStageNotification(
+          notificationId: REMINDER_FERTILE_WINDOW_END_INDEX,
+          notificationDate: notificationDate,
+          title: language.fertileWindowEnd,
+          body: language.fertileWindowEndBody,
+        );
+      }
+    }
+    
+    // 3. Schedule notification for day 27 (next period expected)
+    if (cycleInfo.dateRegle != null && cycleInfo.dateRegle!.isNotEmpty) {
+      DateTime? periodStart = _parseDate(cycleInfo.dateRegle);
+      if (periodStart != null) {
+        // Day 27 = periodStart + 26 days (0-indexed)
+        DateTime day27 = periodStart.add(const Duration(days: 26));
+        DateTime notificationDate = DateTime(
+          day27.year,
+          day27.month,
+          day27.day,
+          defaultHour,
+          defaultMinute,
+        );
+        
+        await scheduleCycleStageNotification(
+          notificationId: REMINDER_DAY_27_INDEX,
+          notificationDate: notificationDate,
+          title: language.nextPeriodExpected,
+          body: language.nextPeriodExpectedBody,
+        );
+      }
+    }
+    
+    print('✅ All cycle stage notifications scheduled successfully');
+  } catch (e) {
+    print('❌ Error scheduling cycle stage notifications: $e');
+  }
+}
+
+/// Get all scheduled notifications with formatted information
+/// Returns a list of maps containing notification details
+Future<List<Map<String, dynamic>>> getAllScheduledNotifications() async {
+  try {
+    List<NotificationModel> scheduledNotifications =
+        await AwesomeNotifications().listScheduledNotifications();
+    
+    List<Map<String, dynamic>> notificationsList = [];
+    
+    for (var notification in scheduledNotifications) {
+      String? title = notification.content?.title ?? 'Sans titre';
+      String? body = notification.content?.body ?? '';
+      int? id = notification.content?.id;
+      NotificationSchedule? schedule = notification.schedule;
+      
+      String scheduleInfo = 'Non programmée';
+      DateTime? scheduledDate;
+      
+      if (schedule is NotificationCalendar) {
+        int year = schedule.year ?? DateTime.now().year;
+        int month = schedule.month ?? DateTime.now().month;
+        int day = schedule.day ?? DateTime.now().day;
+        int hour = schedule.hour ?? 0;
+        int minute = schedule.minute ?? 0;
+        
+        scheduledDate = DateTime(year, month, day, hour, minute);
+        
+        String dateStr = '${scheduledDate.day}/${scheduledDate.month}/${scheduledDate.year}';
+        String timeStr = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+        
+        bool isRepeating = schedule.repeats;
+        scheduleInfo = '$dateStr à $timeStr${isRepeating ? ' (répétitive)' : ''}';
+      }
+      
+      bool isRepeating = false;
+      if (schedule is NotificationCalendar) {
+        isRepeating = schedule.repeats;
+      }
+      
+      notificationsList.add({
+        'id': id,
+        'title': title,
+        'body': body,
+        'schedule': scheduleInfo,
+        'scheduledDate': scheduledDate,
+        'isRepeating': isRepeating,
+      });
+    }
+    
+    // Sort by scheduled date (earliest first)
+    notificationsList.sort((a, b) {
+      DateTime? dateA = a['scheduledDate'] as DateTime?;
+      DateTime? dateB = b['scheduledDate'] as DateTime?;
+      
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB);
+    });
+    
+    return notificationsList;
+  } catch (e) {
+    print('❌ Error getting scheduled notifications: $e');
+    return [];
+  }
 }

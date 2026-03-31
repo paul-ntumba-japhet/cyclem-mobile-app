@@ -158,7 +158,7 @@ class _DoctorEditProfileScreenState extends State<DoctorEditProfileScreen> {
         child: CircleAvatar(
             maxRadius: 50,
             backgroundColor: Colors.white,
-            backgroundImage: AssetImage(ic_logo)),
+            backgroundImage: AssetImage(black_logo)),
       );
     }
   }

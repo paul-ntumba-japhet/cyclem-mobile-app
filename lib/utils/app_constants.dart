@@ -146,9 +146,36 @@ const KEY_PIN = "pin";
 const KEY_EMAIL = "email";
 const KEY_PHOTO_URL = "photo_url";
 const KEY_QUESTION_DATA = "question_data";
+const KEY_QUESTION_DATA_PREFIX = "question_data_";
 const KEY_REMINDER_DATA = "reminder_data";
+const KEY_CYCLE_INFO = "cycle_info";
+const KEY_CYCLE_INFO_PREFIX = "cycle_info_";
+const KEY_CHAT_BACKEND_TOKEN = "chat_backend_token";
+const KEY_SUBSCRIPTION_INFO = "subscription_info";
+const KEY_SUBSCRIPTION_INFO_PREFIX = "subscription_info_";
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_PERIOD_LENGTH = 5;
+
+/// Helper function to get phone-specific question data key
+String getQuestionDataKeyForPhone(String phoneNumber) {
+  // Remove non-digit characters for consistent key
+  String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  return '$KEY_QUESTION_DATA_PREFIX$cleanPhone';
+}
+
+/// Helper function to get phone-specific cycle info key
+String getCycleInfoKeyForPhone(String phoneNumber) {
+  // Remove non-digit characters for consistent key
+  String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  return '$KEY_CYCLE_INFO_PREFIX$cleanPhone';
+}
+
+/// Helper function to get phone-specific subscription info key
+String getSubscriptionInfoKeyForPhone(String phoneNumber) {
+  // Remove non-digit characters for consistent key
+  String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  return '$KEY_SUBSCRIPTION_INFO_PREFIX$cleanPhone';
+}
 const PER_PAGE_CHAT_COUNT = 50;
 const chatMsgRadius = 12.0;
 const EXCEPTION_NO_USER_FOUND = "EXCEPTION_NO_USER_FOUND";

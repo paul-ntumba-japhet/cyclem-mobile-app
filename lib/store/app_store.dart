@@ -321,9 +321,8 @@ abstract class AppStoreBase with Store {
     setDefaultLocate();
     selectedLanguage = aCode;
     language = (await AppLocalizations().load(Locale(selectedLanguage)));
-    if (context != null) {
-      (context as Element).markNeedsBuild();
-    }
+    // Force rebuild of MaterialApp by updating selectedLanguage
+    // The Observer in MyApp will detect the change and rebuild
   }
 
   @action

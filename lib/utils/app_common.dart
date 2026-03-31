@@ -28,6 +28,18 @@ import 'app_constants.dart';
 import 'app_images.dart';
 import 'dynamic_theme.dart';
 
+/// DRC (Democratic Republic of Congo) country code for payment redirect logic.
+/// If the user's country code is different from 243 (DRC), they are redirected to payment.
+const String DRC_COUNTRY_CODE = '243';
+
+/// Returns true if the given country code or full phone number is DRC (243).
+/// Accepts: "+243", "243", "+243812345678", "243812345678", etc.
+bool isDRCCountryCode(String? countryCodeOrPhone) {
+  if (countryCodeOrPhone == null || countryCodeOrPhone.isEmpty) return false;
+  final digits = countryCodeOrPhone.replaceAll(RegExp(r'[^\d]'), '');
+  return digits.startsWith(DRC_COUNTRY_CODE);
+}
+
 /// Print logs to console
 printEraAppLogs(String message) {
   if (kDebugMode) {
@@ -69,6 +81,9 @@ Future<void> fetchAndStoreMenstrualCycleKeys() async {
         !ivKey.contains('ADD')) {
       await setValue(MENSTRUAL_CYCLE_SECRET_KEY, secretKey);
       await setValue(MENSTRUAL_CYCLE_IV_KEY, ivKey);
+
+      // Reload json file with new language 
+      await initJsonFile();
 
       // Reinitialize MenstrualCycleWidget with new keys
       try {
@@ -904,5 +919,13 @@ Future<void> updateAppLanguageConfiguration(
   await setValue(SELECTED_LANGUAGE_COUNTRY_CODE, data.countryCode);
   selectedServerLanguageData = data;
   await setValue(IS_SELECTED_LANGUAGE_CHANGE, true);
-  appStore.setLanguage(data.languageCode!, context: context);
+  
+  // Update the locale immediately
+  if (defaultServerLanguageData != null && defaultServerLanguageData!.isNotEmpty) {
+    performLanguageOperation(defaultServerLanguageData);
+  }
+  
+  // Update app store language (this will trigger MaterialApp rebuild via ValueKey)
+  // No need to use context here as ValueKey in MaterialApp handles the rebuild automatically
+  await appStore.setLanguage(data.languageCode!, context: null);
 }

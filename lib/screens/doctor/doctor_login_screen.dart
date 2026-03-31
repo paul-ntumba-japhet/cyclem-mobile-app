@@ -89,12 +89,12 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
           }).catchError((e) {});
         } else {
           appStore.setLoading(false);
-          toast("User is not active");
+          toast(language.userIsNotActive);
           return;
         }
       }).catchError((e) {
         appStore.setLoading(false);
-        toast(e.toString());
+        toast(language.somethingWentWrong);
       });
     }
   }
@@ -157,17 +157,17 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: <Widget>[
                                 Container(
-                                  height: 60,
-                                  width: 60,
+                                  height: 90,
+                                  width: 90,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(10),
                                   child: Image.asset(
-                                    ic_logo,
-                                    height: 39,
-                                    width: 27,
+                                    black_logo,
+                                    height: 56,
+                                    width: 40,
                                   ),
                                 ),
                                 Text('${language.welcomeBack} Dr🖐',

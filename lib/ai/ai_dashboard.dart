@@ -203,7 +203,7 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
             title: Column(
               children: [
                 Text(
-                  'Era Ai',
+                  'CycleM Ai',
                   style: boldTextStyle(
                     color: mainColorText,
                     size: 18,

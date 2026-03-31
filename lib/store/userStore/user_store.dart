@@ -1,5 +1,7 @@
 
 import 'package:era_flutter/model/user/user_models/user_model.dart';
+import 'package:era_flutter/model/user/cycle_info_model.dart';
+import 'package:era_flutter/model/user/subscription_info_model.dart';
 import 'package:mobx/mobx.dart';
 
 import '../../extensions/shared_pref.dart';
@@ -119,6 +121,12 @@ abstract class UserStoreBase with Store {
   @observable
   HealthExpertModel? doctor = null;
 
+  @observable
+  CycleInfoModel? cycleInfo = null;
+
+  @observable
+  SubscriptionInfoModel? subscriptionInfo = null;
+
   @action
   Future<void> setDoctorData(HealthExpertModel doctorData,
       {bool isInitialization = false}) async {
@@ -129,6 +137,18 @@ abstract class UserStoreBase with Store {
   Future<void> setUserModelData(UserModel userData,
       {bool isInitialization = false}) async {
     user = userData;
+  }
+
+  @action
+  Future<void> setCycleInfo(CycleInfoModel? cycleInfoData,
+      {bool isInitialization = false}) async {
+    cycleInfo = cycleInfoData;
+  }
+
+  @action
+  Future<void> setSubscriptionInfo(SubscriptionInfoModel? subscriptionInfoData,
+      {bool isInitialization = false}) async {
+    subscriptionInfo = subscriptionInfoData;
   }
 
   @action
