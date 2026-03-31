@@ -30,6 +30,7 @@ ios/.symlinks/
 macos/Flutter/ephemeral/
 linux/flutter/ephemeral/
 windows/flutter/ephemeral/
+.dart_tool/
 
 # --- Logs / temp ---
 *.log
