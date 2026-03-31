@@ -12,6 +12,8 @@ import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
 import '../../utils/period_date_validation.dart';
 import '../../model/user/chat_message_response_model.dart';
+import '../../model/user/cycle_info_model.dart';
+import '../../service/phone_verification_service.dart';
 
 class IkChatbotScreen extends StatefulWidget {
   static String tag = '/IkChatbotScreen';
@@ -27,6 +29,9 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   static const String _chatMessagesKeyPrefix = 'CHAT_MESSAGES_HISTORY';
+  static const String _registrationPeriodRequiredKey = 'registration_period_required';
+  static const String _refreshCycleRequiredKey = 'refresh_cycle_required';
+  bool _requiresRegistrationPeriodDate = false;
 
   /// Storage key scoped to the logged-in user's phone number to avoid conflicts between users.
   String _getChatHistoryKey() {
@@ -46,12 +51,67 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
     super.initState();
     logScreenView("IK Chatbot screen");
     // Load saved messages from storage first
-    _loadChatHistory().then((_) {
+    _loadChatHistory().then((_) async {
+      await _checkRegistrationPeriodDateRequirement();
       // Fetch initial welcome message from API only if no messages exist
-      if (_messages.isEmpty) {
+      if (_messages.isEmpty && !_requiresRegistrationPeriodDate) {
         _fetchInitialWelcomeMessage();
       }
     });
+  }
+
+  Future<void> _checkRegistrationPeriodDateRequirement() async {
+    // Use the same mechanism as home_screen:
+    // 1) userStore.cycleInfo
+    // 2) fallback to KEY_CYCLE_INFO global shared pref
+    CycleInfoModel? cycleInfo = userStore.cycleInfo;
+    if (cycleInfo == null) {
+      try {
+        Map<String, dynamic> cycleInfoJson = getJSONAsync(KEY_CYCLE_INFO);
+        if (cycleInfoJson.isNotEmpty) {
+          cycleInfo = CycleInfoModel.fromJson(cycleInfoJson);
+          userStore.setCycleInfo(cycleInfo, isInitialization: true);
+        }
+      } catch (_) {}
+    }
+
+    final String rawDateRegle = cycleInfo?.dateRegle?.trim() ?? '';
+    final String normalizedDateRegle = rawDateRegle.toUpperCase();
+    final bool isBlockedPlaceholderDate = rawDateRegle == '2025-01-01';
+    final bool isBlockedPlaceholderCode = normalizedDateRegle == 'S1';
+    final bool hasSubmittedDate = rawDateRegle.isNotEmpty &&
+        !isBlockedPlaceholderDate &&
+        !isBlockedPlaceholderCode;
+
+    if (!mounted) return;
+
+    if (!hasSubmittedDate) {
+      setState(() {
+        _requiresRegistrationPeriodDate = true;
+        final alreadyExists = _messages.any(
+          (m) => !m.isUser && m.responseKey == _registrationPeriodRequiredKey,
+        );
+        if (!alreadyExists) {
+          _messages.insert(
+            0,
+            ChatMessage(
+              text:
+                  'Welcome to the cycleM assistant. You must submit your last period date to use the chat features.',
+              isUser: false,
+              timestamp: DateTime.now(),
+              smartReplies: const ['Submit your date'],
+              responseKey: _registrationPeriodRequiredKey,
+              requiresDateInput: false,
+            ),
+          );
+        }
+      });
+      _saveChatHistory();
+    } else {
+      setState(() {
+        _requiresRegistrationPeriodDate = false;
+      });
+    }
   }
 
   Future<void> _fetchInitialWelcomeMessage() async {
@@ -144,6 +204,12 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
   }
 
   void _sendMessage() {
+    if (_requiresRegistrationPeriodDate) {
+      toast(
+          'Please submit your last period date first to use the chat features.');
+      return;
+    }
+
     if (_messageController.text.trim().isEmpty) return;
 
     String userInput = _messageController.text.trim();
@@ -457,6 +523,12 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
   /// Send a choice (from API choices) and show next bot response.
   /// Uses the responseKey from the previous bot message instead of choice.nextKey.
   Future<void> _sendChoiceReply(ChatChoice choice, ChatMessage? previousBotMessage) async {
+    if (_requiresRegistrationPeriodDate) {
+      toast(
+          'Please submit your last period date first to use the chat features.');
+      return;
+    }
+
     String phoneNumber = userStore.user?.phoneNumber ?? getStringAsync(KEY_PHONE_NUMBER);
     if (phoneNumber.isEmpty) {
       if (!mounted) return;
@@ -822,6 +894,10 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
                   children: message.smartReplies!.map((reply) {
                     return ElevatedButton(
                       onPressed: () {
+                        if (reply.toLowerCase().trim() == 'submit your date') {
+                          _showDatePicker(message);
+                          return;
+                        }
                         setState(() {
                           _messages.insert(0, ChatMessage(
                             text: reply,
@@ -890,8 +966,11 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
+                enabled: !_requiresRegistrationPeriodDate,
                 decoration: InputDecoration(
-                  hintText: language.typeYourMessage,
+                  hintText: _requiresRegistrationPeriodDate
+                      ? 'Submit your last period date to continue'
+                      : language.typeYourMessage,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(25),
                     borderSide: BorderSide.none,
@@ -916,7 +995,7 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
               ),
               child: IconButton(
                 icon: Icon(Icons.send, color: Colors.white),
-                onPressed: _sendMessage,
+                onPressed: _requiresRegistrationPeriodDate ? null : _sendMessage,
               ),
             ),
           ],
@@ -975,7 +1054,10 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
 
   /// Show date picker for period date selection when cycle_eligible response is received
   Future<void> _showDatePicker(ChatMessage message) async {
-    if (message.responseKey != 'cycle_eligible') return;
+    if (message.responseKey != 'cycle_eligible' &&
+        message.responseKey != _registrationPeriodRequiredKey) {
+      return;
+    }
 
     // Calculate date range: from 33 days ago to today
     final DateTime today = DateTime.now();
@@ -1039,8 +1121,93 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
     });
     _saveChatHistory();
 
-    // Send API request with selected date
-    await _sendDateInput(formattedDate, message.responseKey!);
+    if (message.responseKey == _registrationPeriodRequiredKey) {
+      await _submitRegistrationPeriodDate(formattedDate);
+    } else {
+      // Send API request with selected date
+      await _sendDateInput(formattedDate, message.responseKey!);
+    }
+  }
+
+  Future<void> _submitRegistrationPeriodDate(String formattedDate) async {
+    final String fullPhoneNumber =
+        userStore.user?.phoneNumber ?? getStringAsync(KEY_PHONE_NUMBER);
+    final String phoneForApi = fullPhoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (phoneForApi.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        if (_messages.isNotEmpty && _messages.first.isLoading) _messages.removeAt(0);
+        _messages.insert(0, ChatMessage(
+          text: language.phoneNotFoundReconnect,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _saveChatHistory();
+      return;
+    }
+
+    try {
+      const bool q1 = true;
+      const bool q2 = true;
+      const bool q3 = false;
+
+      final success = await PhoneVerificationService.createSubscriptionWithPeriodDate(
+        phoneNumber: fullPhoneNumber,
+        periodDate: formattedDate,
+        question1Answer: q1,
+        question2Answer: q2,
+        question3Answer: q3,
+      );
+
+      if (!mounted) return;
+      if (!success) {
+        setState(() {
+          if (_messages.isNotEmpty && _messages.first.isLoading) _messages.removeAt(0);
+          _messages.insert(0, ChatMessage(
+            text: language.serverErrorTryAgain,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+        });
+        _saveChatHistory();
+        return;
+      }
+
+      await userStore.setPeriodDate(formattedDate);
+      final existingCycleInfo = loadCycleInfoForPhone(phoneForApi);
+      final updatedCycleInfo = CycleInfoModel(
+        dateCreation: existingCycleInfo?.dateCreation,
+        dateFertiStart: existingCycleInfo?.dateFertiStart,
+        dateFertireqEnd: existingCycleInfo?.dateFertireqEnd,
+        dateRegle: formattedDate,
+        dateProchaineReglesStart: existingCycleInfo?.dateProchaineReglesStart,
+        dateProchaineReglesEnd: existingCycleInfo?.dateProchaineReglesEnd,
+      );
+      await userStore.setCycleInfo(updatedCycleInfo);
+      await saveCycleInfoForPhone(phoneForApi, updatedCycleInfo);
+
+      setState(() {
+        _requiresRegistrationPeriodDate = false;
+        if (_messages.isNotEmpty && _messages.first.isLoading) _messages.removeAt(0);
+      });
+
+      _messages.clear();
+      await _saveChatHistory();
+      await _fetchInitialWelcomeMessage();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (_messages.isNotEmpty && _messages.first.isLoading) _messages.removeAt(0);
+        _messages.insert(0, ChatMessage(
+          text: '${language.errorLabel}: ${e.toString()}',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      _saveChatHistory();
+    }
   }
 
   /// Send API request with selected date as input

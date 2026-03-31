@@ -377,7 +377,7 @@ class DashboardScreenState extends State<DashboardScreen> {
         }
       } else {
         closeDialog();
-        await shouldRedirectToPaymentFlow(
+        final decision = await shouldRedirectToPaymentFlow(
           context: context,
           phoneNumber: fullPhoneNumber,
           dateRegle: DateFormat('yyyy-MM-dd').format(picked),
@@ -401,6 +401,15 @@ class DashboardScreenState extends State<DashboardScreen> {
             );
           },
         );
+        if (decision == PaymentFlowDecision.noRedirectAllowed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(language.anErrorHasOccurred),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
         return;
       }
     } catch (e) {

@@ -4,6 +4,7 @@ import 'package:era_flutter/extensions/extension_util/string_extensions.dart';
 import 'package:era_flutter/extensions/extension_util/widget_extensions.dart';
 import 'package:era_flutter/extensions/new_colors.dart';
 import 'package:era_flutter/model/user/question_model.dart';
+import 'package:era_flutter/model/user/cycle_info_model.dart';
 import 'package:era_flutter/screens/user/about_screen.dart';
 import 'package:era_flutter/screens/user/inter_settings_screen.dart';
 import 'package:era_flutter/screens/user/period_prediction_screen.dart';
@@ -663,7 +664,22 @@ class _SettingScreenState extends State<SettingScreen>
   }
 
   Future<void> getUserLastPeriodDate() async {
-    userLastPeriodDate = await instance.getPreviousPeriodDay();
+    // Use the same mechanism as home_screen:
+    // 1) userStore.cycleInfo
+    // 2) fallback to KEY_CYCLE_INFO global shared pref
+    try {
+      CycleInfoModel? cycleInfo = userStore.cycleInfo;
+      if (cycleInfo == null) {
+        Map<String, dynamic> cycleInfoJson = getJSONAsync(KEY_CYCLE_INFO);
+        if (cycleInfoJson.isNotEmpty) {
+          cycleInfo = CycleInfoModel.fromJson(cycleInfoJson);
+          userStore.setCycleInfo(cycleInfo, isInitialization: true);
+        }
+      }
+      userLastPeriodDate = cycleInfo?.dateRegle;
+    } catch (_) {
+      userLastPeriodDate = null;
+    }
   }
 
   void _handleGoalSwitch(int newIndex) async {
@@ -1231,6 +1247,25 @@ class _SettingScreenState extends State<SettingScreen>
                               mSettingOption(language.about, ic_info, () {
                                 AboutScreen().launch(context,
                                     shouldCheckForNetworkConnection: true);
+                              }),
+                              10.height,
+                              mSettingOption(
+                                  "Vider l'historique du chat", ic_restart, () {
+                                showConfirmDialogCustom(
+                                  image: ic_restart,
+                                  bgColor: context.cardColor,
+                                  iconColor: ColorUtils.colorPrimary,
+                                  context,
+                                  negativeBg: context.cardColor,
+                                  primaryColor: ColorUtils.colorPrimary,
+                                  title: language.areYouSure,
+                                  positiveText: language.clear,
+                                  negativeText: language.cancel,
+                                  height: 100,
+                                  onAccept: (c) async {
+                                    await clearChatHistory();
+                                  },
+                                );
                               }),
                               10.height,
                               mSettingOption(language.logout, ic_logout2, () {

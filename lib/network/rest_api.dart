@@ -2734,6 +2734,94 @@ Future<ChatBackendAuthModel> chatBackendApi() async {
   }
 }
 
+/// Mobile payment local-number authentication.
+/// Endpoint: POST https://api.quickshare-app.io/quickshare-api/connector/api/authenticate
+/// The returned token is stored in SharedPreferences using [KEY_MOBILE_PAYMENT_TOKEN].
+Future<Map<String, dynamic>> authenticateMobilePaymentLocalNumber({
+  required String phoneNumber,
+}) async {
+  try {
+    const String apiUrl =
+        'https://api.quickshare-app.io/quickshare-api/connector/api/authenticate';
+    final url = Uri.parse(apiUrl);
+
+    // Kept for signature compatibility and future use.
+    final String phoneForApi = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    if (phoneForApi.isEmpty) {
+      throw Exception('Invalid phone number format');
+    }
+
+    final Map<String, dynamic> requestBody = {
+      'id': 3,
+      'accountID': '243827130000',
+      'userName': 'cycle',
+      'email': 'test2@test.com',
+      'ipAddresse': '10.1.22.24',
+      'name': 'BusinessName1',
+      'businessCountry': 'RDC',
+      'passe': 'cycle123',
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      final Map<String, dynamic> data = responseData is Map<String, dynamic>
+          ? responseData
+          : responseData is Map
+              ? Map<String, dynamic>.from(responseData)
+              : throw Exception('Invalid response format: expected Map');
+
+      final dynamic objectData = data['object'];
+      String token = '';
+
+      if (objectData is Map<String, dynamic>) {
+        token = objectData['tokken']?.toString() ?? '';
+      } else if (objectData is Map) {
+        token = objectData['tokken']?.toString() ?? '';
+      }
+
+      if (token.isEmpty) {
+        throw Exception('Mobile payment authentication: token missing in response');
+      }
+
+      await setValue(KEY_MOBILE_PAYMENT_TOKEN, token);
+      return data;
+    }
+
+    String errorMessage = 'Mobile payment authentication failed';
+    try {
+      final errorData = jsonDecode(response.body);
+      if (errorData is Map && errorData.containsKey('resultDesc')) {
+        final dynamic resultDesc = errorData['resultDesc'];
+        if (resultDesc != null && resultDesc.toString().isNotEmpty) {
+          errorMessage = resultDesc.toString();
+        }
+      }
+      if (errorData is Map && errorData.containsKey('message')) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map && errorData.containsKey('error')) {
+        errorMessage = errorData['error'].toString();
+      }
+    } catch (_) {}
+
+    throw Exception('HTTP ${response.statusCode}: $errorMessage');
+  } catch (e) {
+    rethrow;
+  }
+}
+
+/// Returns stored mobile payment auth token.
+String getStoredMobilePaymentToken() {
+  return getStringAsync(KEY_MOBILE_PAYMENT_TOKEN);
+}
+
 /// Chatbot message API. Call after obtaining token via [chatBackendApi].
 /// Endpoint: POST https://www.quickshare-apps.com/chat-backend/api/chat/message
 /// Uses [KEY_CHAT_BACKEND_TOKEN] for Authorization. Returns [text] and [choices] for next chat steps; [choices] can be [].

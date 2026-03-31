@@ -151,6 +151,7 @@ const KEY_REMINDER_DATA = "reminder_data";
 const KEY_CYCLE_INFO = "cycle_info";
 const KEY_CYCLE_INFO_PREFIX = "cycle_info_";
 const KEY_CHAT_BACKEND_TOKEN = "chat_backend_token";
+const KEY_MOBILE_PAYMENT_TOKEN = "mobile_payment_token";
 const KEY_SUBSCRIPTION_INFO = "subscription_info";
 const KEY_SUBSCRIPTION_INFO_PREFIX = "subscription_info_";
 const DEFAULT_CYCLE_LENGTH = 28;

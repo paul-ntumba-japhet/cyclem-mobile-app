@@ -103,6 +103,14 @@ class PaymentFlowMetadata {
   });
 }
 
+enum PaymentFlowDecision {
+  noRedirectAllowed,
+  redirectedToStripe,
+  redirectedToMobile,
+  unsupportedPaymentCode,
+  error,
+}
+
 String _extractCountryCodeFromPhone(String phoneNumber) {
   final digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
   if (digits.isEmpty) return '';
@@ -135,9 +143,9 @@ Future<PaymentFlowMetadata> getPaymentFlowMetadata({
 /// Rules:
 /// - country != 243 AND payment code == 300 -> Stripe checkout redirect.
 /// - country == 243 AND payment code == 300 -> mobile payment callback.
-/// - payment code == 100 -> return false (no redirect needed).
-/// - any other code -> send error message and return false.
-Future<bool> shouldRedirectToPaymentFlow({
+/// - payment code == 100 -> [PaymentFlowDecision.noRedirectAllowed].
+/// - any other code -> [PaymentFlowDecision.unsupportedPaymentCode].
+Future<PaymentFlowDecision> shouldRedirectToPaymentFlow({
   required BuildContext context,
   required String phoneNumber,
   required String dateRegle,
@@ -156,18 +164,18 @@ Future<bool> shouldRedirectToPaymentFlow({
     final String paymentCode = data.paymentStatus.code;
 
     if (paymentCode == '100') {
-      return false;
+      return PaymentFlowDecision.noRedirectAllowed;
     }
 
     if (paymentCode == '300') {
       if (countryCode != DRC_COUNTRY_CODE) {
         StripeCheckout().launch(context);
-        return true;
+        return PaymentFlowDecision.redirectedToStripe;
       }
 
       if (onMobilePaymentRedirect != null) {
         onMobilePaymentRedirect();
-        return true;
+        return PaymentFlowDecision.redirectedToMobile;
       }
 
       final msg = 'Mobile payment flow is not available yet.';
@@ -176,7 +184,7 @@ Future<bool> shouldRedirectToPaymentFlow({
       } else {
         toast(msg);
       }
-      return false;
+      return PaymentFlowDecision.unsupportedPaymentCode;
     }
 
     final fallbackMessage =
@@ -186,7 +194,7 @@ Future<bool> shouldRedirectToPaymentFlow({
     } else {
       toast(fallbackMessage);
     }
-    return false;
+    return PaymentFlowDecision.unsupportedPaymentCode;
   } catch (e) {
     final errorMessage = e.toString().replaceFirst('Exception: ', '');
     if (onError != null) {
@@ -194,7 +202,7 @@ Future<bool> shouldRedirectToPaymentFlow({
     } else {
       toast(errorMessage);
     }
-    return false;
+    return PaymentFlowDecision.error;
   }
 }
 
