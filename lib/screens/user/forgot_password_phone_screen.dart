@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:era_flutter/extensions/extension_util/context_extensions.dart';
 import 'package:era_flutter/extensions/extensions.dart';
@@ -33,15 +35,20 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
   bool _isCodeSent = false;
   bool _isVerifying = false;
   String? _verificationError;
+  int? _forceResendingToken;
+  Timer? _resendTimer;
+  int _secondsUntilResend = 0;
 
   String? _verificationId;
   /// Phone string passed to [ResetPasswordScreen] (same format as before: dial code + local digits).
   String? _pendingFullPhone;
 
   static const int _otpLength = 6;
+  static const int _resendCooldownSeconds = 60;
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     phoneController.dispose();
     phoneFocus.dispose();
     _pinController.dispose();
@@ -73,10 +80,112 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
       case 'invalid-verification-id':
         return language.invalidCodeTryAgain;
       case 'missing-verification-code':
-        return language.pleaseEnterCompleteFiveDigitCode;
+        return 'Please enter the full 6-digit code.';
       default:
         return e.message?.isNotEmpty == true ? e.message! : e.code;
     }
+  }
+
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() {
+      _secondsUntilResend = _resendCooldownSeconds;
+    });
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsUntilResend <= 1) {
+        timer.cancel();
+        setState(() {
+          _secondsUntilResend = 0;
+        });
+      } else {
+        setState(() {
+          _secondsUntilResend--;
+        });
+      }
+    });
+  }
+
+  String get _resendLabel {
+    if (_secondsUntilResend > 0) {
+      return 'Resend code in ${_secondsUntilResend}s';
+    }
+    return 'Resend code';
+  }
+
+  String _maskedPhone(String fullPhoneNumber) {
+    final digits = fullPhoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length <= 4) return fullPhoneNumber;
+    final prefixLength = digits.length > 7 ? 3 : 2;
+    final suffix = digits.substring(digits.length - 2);
+    final prefix = digits.substring(0, prefixLength);
+    return '+$prefix****$suffix';
+  }
+
+  Future<void> _requestFirebaseCode({required bool isResend}) async {
+    String phoneNumber = phoneController.text.trim();
+    if (phoneNumber.isEmpty || phoneNumber.length < 8) {
+      setState(() {
+        _phoneError = language.pleaseEnterValidPhoneNumber;
+      });
+      return;
+    }
+
+    final String fullPhoneNumber = '$_selectedCountryCode$phoneNumber';
+    _pendingFullPhone = fullPhoneNumber;
+    final String e164 = _e164Phone(fullPhoneNumber);
+
+    setState(() {
+      _isLoading = true;
+      _verificationError = null;
+      if (!isResend) {
+        _verificationId = null;
+        _pinController.clear();
+      }
+    });
+
+    try {
+      await ensureFirebaseInitialized();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _verificationError = '${language.failedToGetAuthCode}: ${e.toString()}';
+      });
+      return;
+    }
+
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: e164,
+      timeout: const Duration(seconds: 120),
+      forceResendingToken: isResend ? _forceResendingToken : null,
+      verificationCompleted: (PhoneAuthCredential credential) {
+        Future(() => _finishAfterPhoneVerified(credential));
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _verificationError = _firebaseAuthMessage(e);
+        });
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        if (!mounted) return;
+        setState(() {
+          _verificationId = verificationId;
+          _forceResendingToken = resendToken;
+          _isLoading = false;
+          _isCodeSent = true;
+        });
+        _startResendCooldown();
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
   }
 
   Future<void> _submitPhoneNumber() async {
@@ -102,53 +211,12 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
       return;
     }
 
-    _pendingFullPhone = fullPhoneNumber;
+    await _requestFirebaseCode(isResend: false);
+  }
 
-    setState(() {
-      _isLoading = true;
-      _verificationError = null;
-      _verificationId = null;
-      _pinController.clear();
-    });
-
-    try {
-      await ensureFirebaseInitialized();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _verificationError = '${language.failedToGetAuthCode}: ${e.toString()}';
-      });
-      return;
-    }
-
-    final String e164 = _e164Phone(fullPhoneNumber);
-
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: e164,
-      timeout: const Duration(seconds: 120),
-      verificationCompleted: (PhoneAuthCredential credential) {
-        Future(() => _finishAfterPhoneVerified(credential));
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _verificationError = _firebaseAuthMessage(e);
-        });
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        if (!mounted) return;
-        setState(() {
-          _verificationId = verificationId;
-          _isLoading = false;
-          _isCodeSent = true;
-        });
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        _verificationId = verificationId;
-      },
-    );
+  Future<void> _resendCode() async {
+    if (_secondsUntilResend > 0 || _isLoading || _isVerifying) return;
+    await _requestFirebaseCode(isResend: true);
   }
 
   Future<void> _finishAfterPhoneVerified(PhoneAuthCredential credential) async {
@@ -169,7 +237,10 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
       });
       final String fullPhone =
           _pendingFullPhone ?? '$_selectedCountryCode${phoneController.text.trim()}';
-      ResetPasswordScreen(phoneNumber: fullPhone).launch(context);
+      ResetPasswordScreen(
+        phoneNumber: fullPhone,
+        isFirebaseVerified: true,
+      ).launch(context);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -194,7 +265,7 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
 
     if (enteredCode.length != _otpLength) {
       setState(() {
-        _verificationError = language.pleaseEnterCompleteFiveDigitCode;
+        _verificationError = 'Please enter the full 6-digit code.';
       });
       return;
     }
@@ -402,8 +473,26 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
                                   width: context.width(),
                                 ),
                               if (_isCodeSent) ...[
+                                if (_pendingFullPhone != null) ...[
+                                  Container(
+                                    width: context.width(),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Code sent to ${_maskedPhone(_pendingFullPhone!)}',
+                                      style: primaryTextStyle(
+                                        size: 13,
+                                        color: mainColorBodyText,
+                                      ),
+                                    ),
+                                  ),
+                                  16.height,
+                                ],
                                 Text(
-                                  language.enterFiveDigitCode,
+                                  'Enter 6-digit code',
                                   style: boldTextStyle(
                                     color: mainColorText,
                                     weight: FontWeight.w500,
@@ -468,6 +557,22 @@ class _ForgotPasswordPhoneScreenState extends State<ForgotPasswordPhoneScreen> {
                                   ),
                                 ],
                                 24.height,
+                                AppButton(
+                                  disabledColor: ColorUtils.colorPrimary.withOpacity(0.7),
+                                  text: _resendLabel,
+                                  elevation: 0,
+                                  textStyle: boldTextStyle(
+                                    color: Colors.white,
+                                    weight: FontWeight.w500,
+                                    size: 14,
+                                  ),
+                                  color: _secondsUntilResend > 0
+                                      ? primaryColor.withOpacity(0.7)
+                                      : primaryColor,
+                                  onTap: _secondsUntilResend > 0 ? null : _resendCode,
+                                  width: context.width(),
+                                ),
+                                12.height,
                                 AppButton(
                                   disabledColor: ColorUtils.colorPrimary,
                                   text: _isVerifying ? language.verifying : language.verifyCode,

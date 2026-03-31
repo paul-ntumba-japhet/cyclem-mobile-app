@@ -270,50 +270,13 @@ class _CircularBeadsDiagramState extends State<CircularBeadsDiagram> {
     if (cycleInfo == null || cycleInfo.dateRegle == null || cycleInfo.dateRegle!.isEmpty) {
       return true;
     }
-    
-    try {
-      // Parse dateRegle
-      DateTime? periodDate;
-      String dateRegle = cycleInfo.dateRegle!;
-      
-      if (dateRegle.contains('-')) {
-        List<String> parts = dateRegle.split('-');
-        if (parts.length == 3) {
-          // Try dd-MM-yyyy first
-          if (parts[0].length == 2) {
-            periodDate = DateTime.parse('${parts[2]}-${parts[1]}-${parts[0]}');
-          } else {
-            // yyyy-MM-dd format
-            periodDate = DateTime.parse(dateRegle);
-          }
-        }
-      } else {
-        // Try parsing as-is
-        periodDate = DateTime.parse(dateRegle);
-      }
-      
-      if (periodDate == null) {
-        return true;
-      }
-      
-      // Get today's date (start of day for accurate calculation)
-      DateTime today = DateTime.now();
-      DateTime todayStart = DateTime(today.year, today.month, today.day);
-      DateTime periodStart = DateTime(periodDate.year, periodDate.month, periodDate.day);
-      
-      // Calculate difference in days
-      int daysDifference = todayStart.difference(periodStart).inDays;
-      
-      // If period date is more than 32 days ago, it's expired
-      if (daysDifference > 32) {
-        return true;
-      }
-      
-      return false;
-    } catch (e) {
-      print('Error checking period date validity: $e');
-      return true; // Consider invalid on error
-    }
+
+    final phone = _getPhoneNumber() ?? '';
+    final isWithin32Days = isPeriodDateWithin32Days(
+      phoneNumber: phone,
+      periodDate: cycleInfo.dateRegle!,
+    );
+    return !isWithin32Days;
   }
 
   /// Calculate today's bead number based on cycle info dateRegle

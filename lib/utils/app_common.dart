@@ -20,10 +20,12 @@ import '../languageConfiguration/LanguageDataConstant.dart';
 import '../languageConfiguration/ServerLanguageResponse.dart';
 import '../main.dart';
 import '../model/common/app_setting_model.dart';
+import '../model/user/payment_status_model.dart';
 import '../model/user/user_models/user_model.dart';
 import '../network/rest_api.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import '../screens/user/explore_detail_screen.dart';
+import '../screens/payment/checkout.dart';
 import 'app_constants.dart';
 import 'app_images.dart';
 import 'dynamic_theme.dart';
@@ -38,6 +40,162 @@ bool isDRCCountryCode(String? countryCodeOrPhone) {
   if (countryCodeOrPhone == null || countryCodeOrPhone.isEmpty) return false;
   final digits = countryCodeOrPhone.replaceAll(RegExp(r'[^\d]'), '');
   return digits.startsWith(DRC_COUNTRY_CODE);
+}
+
+/// Refactoring helper:
+/// Returns true when the period date is within the last 32 days, otherwise false.
+///
+/// - [phoneNumber] is accepted for signature consistency and tracing/logging.
+/// - [periodDate] supports "yyyy-MM-dd", "dd-MM-yyyy", and ISO formats.
+bool isPeriodDateWithin32Days({
+  required String phoneNumber,
+  required String periodDate,
+}) {
+  try {
+    if (periodDate.trim().isEmpty) return false;
+
+    DateTime? parsedDate;
+    final rawDate = periodDate.trim();
+
+    // Try direct ISO parsing first.
+    parsedDate = DateTime.tryParse(rawDate);
+
+    // Try common app formats if direct parse fails.
+    if (parsedDate == null) {
+      try {
+        parsedDate = DateFormat('yyyy-MM-dd').parseStrict(rawDate);
+      } catch (_) {}
+    }
+
+    if (parsedDate == null) {
+      try {
+        parsedDate = DateFormat('dd-MM-yyyy').parseStrict(rawDate);
+      } catch (_) {}
+    }
+
+    if (parsedDate == null) return false;
+
+    final now = DateTime.now();
+    final currentDateOnly = DateTime(now.year, now.month, now.day);
+    final periodDateOnly =
+        DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+
+    final daysDifference = currentDateOnly.difference(periodDateOnly).inDays;
+    printEraAppLogs(
+        'Period date check phone=$phoneNumber date=$periodDate diffDays=$daysDifference');
+
+    // Future period dates or dates older than 32 days are invalid.
+    if (daysDifference < 0) return false;
+    return daysDifference <= 32;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Container used by payment-flow decision helpers.
+class PaymentFlowMetadata {
+  final String countryCode;
+  final PaymentStatusModel paymentStatus;
+
+  const PaymentFlowMetadata({
+    required this.countryCode,
+    required this.paymentStatus,
+  });
+}
+
+String _extractCountryCodeFromPhone(String phoneNumber) {
+  final digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.isEmpty) return '';
+  if (digits.startsWith(DRC_COUNTRY_CODE)) return DRC_COUNTRY_CODE;
+  if (digits.length >= 3) return digits.substring(0, 3);
+  return digits;
+}
+
+/// Function 1/2:
+/// Fetch and return country code + payment status code.
+Future<PaymentFlowMetadata> getPaymentFlowMetadata({
+  required String phoneNumber,
+  required String dateRegle,
+}) async {
+  final paymentStatus = await getPaymentStatusApi(phoneNumber);
+  final countryCode = _extractCountryCodeFromPhone(phoneNumber);
+
+  printEraAppLogs(
+      'Payment metadata loaded (countryCode=$countryCode, paymentCode=${paymentStatus.code}, dateRegle=$dateRegle)');
+
+  return PaymentFlowMetadata(
+    countryCode: countryCode,
+    paymentStatus: paymentStatus,
+  );
+}
+
+/// Function 2/2:
+/// Decide and trigger payment redirect.
+///
+/// Rules:
+/// - country != 243 AND payment code == 300 -> Stripe checkout redirect.
+/// - country == 243 AND payment code == 300 -> mobile payment callback.
+/// - payment code == 100 -> return false (no redirect needed).
+/// - any other code -> send error message and return false.
+Future<bool> shouldRedirectToPaymentFlow({
+  required BuildContext context,
+  required String phoneNumber,
+  required String dateRegle,
+  PaymentFlowMetadata? metadata,
+  VoidCallback? onMobilePaymentRedirect,
+  void Function(String message)? onError,
+}) async {
+  try {
+    final data = metadata ??
+        await getPaymentFlowMetadata(
+          phoneNumber: phoneNumber,
+          dateRegle: dateRegle,
+        );
+
+    final String countryCode = data.countryCode;
+    final String paymentCode = data.paymentStatus.code;
+
+    if (paymentCode == '100') {
+      return false;
+    }
+
+    if (paymentCode == '300') {
+      if (countryCode != DRC_COUNTRY_CODE) {
+        StripeCheckout().launch(context);
+        return true;
+      }
+
+      if (onMobilePaymentRedirect != null) {
+        onMobilePaymentRedirect();
+        return true;
+      }
+
+      final msg = 'Mobile payment flow is not available yet.';
+      if (onError != null) {
+        onError(msg);
+      } else {
+        toast(msg);
+      }
+      return false;
+    }
+
+    final fallbackMessage =
+        data.paymentStatus.message.isNotEmpty ? data.paymentStatus.message : 'Unexpected payment status code: $paymentCode';
+    if (onError != null) {
+      onError(fallbackMessage);
+    } else {
+      toast(fallbackMessage);
+    }
+    return false;
+  } catch (e) {
+    final errorMessage = e.toString().replaceFirst('Exception: ', '');
+    if (onError != null) {
+      onError(errorMessage);
+    } else {
+      toast(errorMessage);
+    }
+    return false;
+  }
 }
 
 /// Print logs to console

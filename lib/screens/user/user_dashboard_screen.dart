@@ -14,7 +14,6 @@ import '../../model/user/cycle_info_model.dart';
 import '../../model/user/dashboard_response.dart';
 import '../../network/rest_api.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
-import '../../screens/payment/checkout.dart';
 import '../../service/phone_verification_service.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
@@ -22,7 +21,6 @@ import '../../utils/dynamic_theme.dart';
 import '../../utils/navigation_utils.dart';
 import '../../utils/period_date_validation.dart';
 import '../../extensions/shared_pref.dart';
-import '../../model/user/payment_status_model.dart';
 import '../screens.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -285,9 +283,12 @@ class DashboardScreenState extends State<DashboardScreen> {
         },
       );
 
-      PaymentStatusModel? paymentStatus;
+      PaymentFlowMetadata? paymentFlowMetadata;
       try {
-        paymentStatus = await getPaymentStatusApi(fullPhoneNumber);
+        paymentFlowMetadata = await getPaymentFlowMetadata(
+          phoneNumber: fullPhoneNumber,
+          dateRegle: DateFormat('yyyy-MM-dd').format(picked),
+        );
       } catch (e) {
         if (mounted) {
           closeDialog();
@@ -307,7 +308,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       }
 
       // Step 5: Handle different payment status codes
-      if (paymentStatus.code == '100') {
+      if (paymentFlowMetadata.paymentStatus.code == '100') {
         // Active payment - call subscription API
         final periodDate = DateFormat('yyyy-MM-dd').format(picked);
 
@@ -374,33 +375,33 @@ class DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         }
-      } else if (paymentStatus.code == '300') {
-        // Inactive payment - check country code
-        closeDialog();
-
-        if (!isDRCCountryCode(fullPhoneNumber)) {
-          // Not DRC (country code 243) - redirect to payment
-          StripeCheckout().launch(context);
-        } else {
-          // DRC (country code 243) - show message
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(language.mustPayBeforeSubmittingDate),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
       } else {
-        // Other payment status - show error
         closeDialog();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(language.anErrorHasOccurred),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        await shouldRedirectToPaymentFlow(
+          context: context,
+          phoneNumber: fullPhoneNumber,
+          dateRegle: DateFormat('yyyy-MM-dd').format(picked),
+          metadata: paymentFlowMetadata,
+          onMobilePaymentRedirect: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(language.mustPayBeforeSubmittingDate),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
+          onError: (message) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message.isNotEmpty ? message : language.anErrorHasOccurred),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
         );
+        return;
       }
     } catch (e) {
       if (mounted) {

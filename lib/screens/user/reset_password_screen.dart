@@ -12,8 +12,13 @@ import 'package:era_flutter/screens/user/sign_in_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String phoneNumber;
+  final bool isFirebaseVerified;
 
-  const ResetPasswordScreen({super.key, required this.phoneNumber});
+  const ResetPasswordScreen({
+    super.key,
+    required this.phoneNumber,
+    this.isFirebaseVerified = false,
+  });
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -46,6 +51,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
+    if (!widget.isFirebaseVerified) {
+      toast('Phone verification is required before resetting password.');
+      return;
+    }
+
     if (!formKey.currentState!.validate()) {
       return;
     }
