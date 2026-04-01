@@ -51,11 +51,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
-    if (!widget.isFirebaseVerified) {
-      toast('Phone verification is required before resetting password.');
-      return;
-    }
-
     if (!formKey.currentState!.validate()) {
       return;
     }
@@ -189,14 +184,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               ),
                               32.height,
                               // Password Field
-                              Text(
-                                language.password,
-                                style: boldTextStyle(
-                                  size: textFontSize_14,
-                                  color: mainColorText,
-                                ),
-                              ),
-                              8.height,
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
@@ -251,14 +238,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               ),
                               24.height,
                               // Confirm Password Field
-                              Text(
-                                language.confirmPassword,
-                                style: boldTextStyle(
-                                  size: textFontSize_14,
-                                  color: mainColorText,
-                                ),
-                              ),
-                              8.height,
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),

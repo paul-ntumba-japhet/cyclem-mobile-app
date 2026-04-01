@@ -4442,7 +4442,11 @@
         {"screenId": "60", "keyword_id": 895, "keyword_name": "mustPayBeforeSubmittingDate", "keyword_value": "Vous devez payer avant de soumettre une nouvelle date"},
         {"screenId": "60", "keyword_id": 896, "keyword_name": "anErrorHasOccurred", "keyword_value": "Une erreur s'est produite"},
         {"screenId": "60", "keyword_id": 897, "keyword_name": "submittingAnswersPleaseWait", "keyword_value": "Envoi de vos réponses, veuillez patienter..."},
-        {"screenId": "60", "keyword_id": 898, "keyword_name": "savingPeriodDatePleaseWait", "keyword_value": "Enregistrement de la date de vos règles, veuillez patienter..."}
+        {"screenId": "60", "keyword_id": 898, "keyword_name": "savingPeriodDatePleaseWait", "keyword_value": "Enregistrement de la date de vos règles, veuillez patienter..."},
+        {"screenId": "60", "keyword_id": 899, "keyword_name": "chatPeriodDateRequiredMessage", "keyword_value": "Bienvenue sur l'assistant cycleM. Vous devez soumettre la date de vos dernières règles pour utiliser les fonctionnalités du chat."},
+        {"screenId": "60", "keyword_id": 900, "keyword_name": "chatSubmitDateButton", "keyword_value": "Soumettre votre date"},
+        {"screenId": "60", "keyword_id": 901, "keyword_name": "chatRefreshCycleMessage", "keyword_value": "Vous devez actualiser votre cycle en soumettant la date de vos règles les plus récentes."},
+        {"screenId": "60", "keyword_id": 902, "keyword_name": "chatRefreshCycleButton", "keyword_value": "Actualiser le cycle"}
       ]
     }
   ]

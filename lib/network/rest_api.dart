@@ -784,7 +784,7 @@ Future<DefaultMessageResponse> changeHealthExpertPasswordApi(Map req) async {
   return DefaultMessageResponse.fromJson(response);
 }
 
-/// Forgot Password
+/// Forgot Password                     
 Future<DefaultMessageResponse> forgotPasswordApi(Map req) async {
   var response = await handleResponse(await buildHttpResponse('forget-password',
       request: req, method: HttpMethod.post));
@@ -2583,7 +2583,6 @@ Future<Map<String, dynamic>> resetPassword({
     if (newPassword.isEmpty) {
       throw Exception('Password cannot be empty');
     }
-
     // Get authentication token
     String authToken;
     try {

@@ -548,6 +548,34 @@ class _SettingScreenState extends State<SettingScreen>
     }
   }
 
+  String get _displayUserName {
+    final primaryName =
+        '${userStore.user?.firstName ?? ''} ${userStore.user?.lastName ?? ''}'
+            .trim();
+    if (primaryName.isNotEmpty) return primaryName;
+
+    final storeName = '${userStore.fName} ${userStore.lName}'.trim();
+    if (storeName.isNotEmpty) return storeName;
+
+    final onboardingName = questionsModelData?.step3PersonalInfo.fullName?.trim() ?? '';
+    if (onboardingName.isNotEmpty) return onboardingName;
+
+    return language.notProvided;
+  }
+
+  String get _displayUserEmail {
+    final primaryEmail = userStore.user?.email?.trim() ?? '';
+    if (primaryEmail.isNotEmpty) return primaryEmail;
+
+    final storeEmail = userStore.email.trim();
+    if (storeEmail.isNotEmpty) return storeEmail;
+
+    final onboardingEmail = questionsModelData?.step3PersonalInfo.email?.trim() ?? '';
+    if (onboardingEmail.isNotEmpty) return onboardingEmail;
+
+    return language.notProvided;
+  }
+
   Widget settingOption(String mTitle, Function onTapCall, IconData icon) {
     return SettingItemWidget(
       padding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
@@ -811,8 +839,7 @@ class _SettingScreenState extends State<SettingScreen>
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    "${userStore.user?.firstName ?? ''} ${userStore.user?.lastName ?? ''}"
-                                                        .trim(),
+                                                    _displayUserName,
                                                     style: boldTextStyle(
                                                       color: mainColorText,
                                                       size: 18,
@@ -824,8 +851,7 @@ class _SettingScreenState extends State<SettingScreen>
                                                   ),
                                                   4.height,
                                                   Text(
-                                                    userStore.user?.email ??
-                                                        'no-email@example.com',
+                                                    _displayUserEmail,
                                                     style: primaryTextStyle(
                                                       color: mainColorBodyText,
                                                       size: 12,

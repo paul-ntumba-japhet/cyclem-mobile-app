@@ -878,4 +878,8 @@ class BaseLanguage {
   String get anErrorHasOccurred => getContentValueFromKey(896);
   String get submittingAnswersPleaseWait => getContentValueFromKey(897);
   String get savingPeriodDatePleaseWait => getContentValueFromKey(898);
+  String get chatPeriodDateRequiredMessage => getContentValueFromKey(899);
+  String get chatSubmitDateButton => getContentValueFromKey(900);
+  String get chatRefreshCycleMessage => getContentValueFromKey(901);
+  String get chatRefreshCycleButton => getContentValueFromKey(902);
 }

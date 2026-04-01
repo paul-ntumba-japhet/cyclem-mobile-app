@@ -4442,7 +4442,11 @@
       {"screenId": "60", "keyword_id": 895, "keyword_name": "mustPayBeforeSubmittingDate", "keyword_value": "You must pay before submitting a new date"},
       {"screenId": "60", "keyword_id": 896, "keyword_name": "anErrorHasOccurred", "keyword_value": "An error has occurred"},
       {"screenId": "60", "keyword_id": 897, "keyword_name": "submittingAnswersPleaseWait", "keyword_value": "Submitting your answers, please wait..."},
-      {"screenId": "60", "keyword_id": 898, "keyword_name": "savingPeriodDatePleaseWait", "keyword_value": "Saving your period date, please wait..."}
+      {"screenId": "60", "keyword_id": 898, "keyword_name": "savingPeriodDatePleaseWait", "keyword_value": "Saving your period date, please wait..."},
+      {"screenId": "60", "keyword_id": 899, "keyword_name": "chatPeriodDateRequiredMessage", "keyword_value": "Welcome to the cycleM assistant. You must submit your last period date to use the chat features."},
+      {"screenId": "60", "keyword_id": 900, "keyword_name": "chatSubmitDateButton", "keyword_value": "Submit your date"},
+      {"screenId": "60", "keyword_id": 901, "keyword_name": "chatRefreshCycleMessage", "keyword_value": "You must refresh your cycle by submitting the date of your most recent period."},
+      {"screenId": "60", "keyword_id": 902, "keyword_name": "chatRefreshCycleButton", "keyword_value": "Refresh Cycle"}
     ]
   }
 ]

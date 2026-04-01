@@ -14,7 +14,7 @@ import '../../main.dart';
 import '../../network/rest_api.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
-import 'forgot_password_phone_screen.dart';
+import 'forgot_password_screen.dart';
 
 class UserSignInScreen extends StatefulWidget {
   const UserSignInScreen({super.key});
@@ -518,7 +518,7 @@ class _UserSignInScreenState extends State<UserSignInScreen>
                                 ).paddingOnly(top: 16, right: 16, left: 16),
                                 TextButton(
                                   onPressed: () {
-                                    ForgotPasswordPhoneScreen().launch(context);
+                                    ForgotPasswordScreen().launch(context);
                                   },
                                   child: Text(
                                     language.forgotPassword + "?",
