@@ -26,6 +26,7 @@ import '../network/rest_api.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import '../screens/user/explore_detail_screen.dart';
 import '../screens/payment/checkout.dart';
+import '../screens/payment/mobile_money_checkout.dart';
 import 'app_constants.dart';
 import 'app_images.dart';
 import 'dynamic_theme.dart';
@@ -33,6 +34,36 @@ import 'dynamic_theme.dart';
 /// DRC (Democratic Republic of Congo) country code for payment redirect logic.
 /// If the user's country code is different from 243 (DRC), they are redirected to payment.
 const String DRC_COUNTRY_CODE = '243';
+
+/// Returns mobile operator name from DRC phone prefix.
+///
+/// Prefix mapping:
+/// - 24382 / 24381 / 24386 -> MPESA
+/// - 24399 / 24398 / 24397 / 24396 -> Airtel Money
+/// - 24380 / 24384 / 24385 / 24389 -> Orange Money
+/// - otherwise -> Unknown Operator
+String getMobileOperator(String phoneNumber) {
+  final digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.length < 5) return 'Unknown Operator';
+
+  final prefix = digits.substring(0, 5);
+  if (prefix == '24382' || prefix == '24381' || prefix == '24386') {
+    return 'MPESA';
+  }
+  if (prefix == '24399' ||
+      prefix == '24398' ||
+      prefix == '24397' ||
+      prefix == '24396') {
+    return 'Airtel Money';
+  }
+  if (prefix == '24380' ||
+      prefix == '24384' ||
+      prefix == '24385' ||
+      prefix == '24389') {
+    return 'Orange Money';
+  }
+  return 'Unknown Operator';
+}
 
 /// Returns true if the given country code or full phone number is DRC (243).
 /// Accepts: "+243", "243", "+243812345678", "243812345678", etc.
@@ -174,7 +205,14 @@ Future<PaymentFlowDecision> shouldRedirectToPaymentFlow({
       }
 
       if (onMobilePaymentRedirect != null) {
-        onMobilePaymentRedirect();
+        //onMobilePaymentRedirect();
+        print('redirected to mobile payment');
+        print('payment code: $paymentCode');
+        print('country code: $countryCode');
+        print('phone number: $phoneNumber');
+        print('date regle: $dateRegle');
+        print('metadata: $metadata');
+        print('on mobile payment redirect: $onMobilePaymentRedirect');
         return PaymentFlowDecision.redirectedToMobile;
       }
 
@@ -202,6 +240,49 @@ Future<PaymentFlowDecision> shouldRedirectToPaymentFlow({
     } else {
       toast(errorMessage);
     }
+    return PaymentFlowDecision.error;
+  }
+}
+
+/// Debug only. Exercises [shouldRedirectToPaymentFlow] with a real API call
+/// to [getPaymentStatusApi] for the given [phoneNumber]. No-op in release.
+Future<PaymentFlowDecision?> debugTestPaymentFlowRedirect({
+  required BuildContext context,
+  required String phoneNumber,
+  required String dateRegle,
+}) async {
+  if (!kDebugMode) return null;
+  if (phoneNumber.isEmpty) {
+    debugPrint('debugTestPaymentFlowRedirect: empty phone number');
+    return null;
+  }
+  try {
+    final metadata = await getPaymentFlowMetadata(
+      phoneNumber: phoneNumber,
+      dateRegle: dateRegle,
+    );
+    final String countryCode = metadata.countryCode;
+    final String paymentCode = metadata.paymentStatus.code;
+
+    if (countryCode == DRC_COUNTRY_CODE && paymentCode == '300') {
+      MobileMoneyCheckoutScreen(
+        phoneNumber: phoneNumber,
+        dateRegle: dateRegle,
+      ).launch(context);
+      debugPrint(
+          'debugTestPaymentFlowRedirect: opened mobile checkout for country=$countryCode code=$paymentCode');
+      return PaymentFlowDecision.redirectedToMobile;
+    }
+
+    final message =
+        'Debug condition not met (country=$countryCode, paymentCode=$paymentCode).';
+    toast(message);
+    debugPrint('debugTestPaymentFlowRedirect: $message');
+    return PaymentFlowDecision.noRedirectAllowed;
+  } catch (e) {
+    final errorMessage = e.toString().replaceFirst('Exception: ', '');
+    toast(errorMessage);
+    debugPrint('debugTestPaymentFlowRedirect error: $errorMessage');
     return PaymentFlowDecision.error;
   }
 }

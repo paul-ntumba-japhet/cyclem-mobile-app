@@ -477,13 +477,7 @@ class _PayScreenState extends State<PayScreen> {
     String userPhone = '';
 
     if (userStore.user != null) {
-      userName = '${userStore.fName} ${userStore.lName}'.trim();
-      if (userName.isEmpty) {
-        final firstName = userStore.user?.firstName ?? '';
-        final lastName = userStore.user?.lastName ?? '';
-        userName = '$firstName $lastName'.trim();
-        if (userName.isEmpty) userName = userStore.user?.displayName ?? '';
-      }
+      userName = (userStore.user?.displayName ?? '').trim();
       userEmail = userStore.email.isNotEmpty ? userStore.email : (userStore.user?.email ?? '');
       userPhone = userStore.user?.phoneNumber ?? '';
     }

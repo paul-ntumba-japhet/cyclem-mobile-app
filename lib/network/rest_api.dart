@@ -48,6 +48,9 @@ import '../model/user/chat_backend_auth_model.dart';
 import '../model/user/chat_message_response_model.dart';
 import '../model/user/stripe_config_model.dart';
 import '../model/user/stripe_customer_model.dart';
+import '../model/user/stripe_setup_intent_payment_method_model.dart';
+import '../model/user/quickshare_stripe_subscription_model.dart';
+import '../model/user/mobile_payment_initialization_model.dart';
 import '../model/user/question_model.dart';
 import '../utils/app_constants.dart';
 import '../utils/app_common.dart';
@@ -2098,6 +2101,79 @@ Future<StripeCustomerModel> createStripeCustomerApi({
   }
 }
 
+/// Create Stripe setup-intent + payment method context via Cycle Menstruel API
+/// Endpoint: POST https://mobile.cycle-menstruel.com/api/stripe/setup-intent/payment-method
+/// Uses current user's Laravel Sanctum token in Authorization header.
+Future<StripeSetupIntentPaymentMethodModel> createStripeSetupIntentPaymentMethodApi({
+  required String name,
+  required String email,
+  required String phone,
+}) async {
+  try {
+    final String sanctumToken = userStore.token.trim();
+    if (sanctumToken.isEmpty) {
+      throw Exception('Sanctum token not available for current user');
+    }
+
+    const String apiUrl =
+        'https://mobile.cycle-menstruel.com/api/stripe/setup-intent';
+    final Uri url = Uri.parse(apiUrl);
+
+    final String requestBody = jsonEncode({
+      'name': name,
+      'email': email,
+      'phone': phone,
+    });
+
+    print('Calling Stripe Setup Intent Payment Method API: $apiUrl');
+    print('Request body: $requestBody');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $sanctumToken',
+      },
+      body: requestBody,
+    );
+
+    print(
+        'Stripe Setup Intent Payment Method API Response - Status: ${response.statusCode}');
+    print(
+        'Stripe Setup Intent Payment Method API Response - Body: ${response.body}');
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception(
+          'Invalid response format: expected Map but got ${decoded.runtimeType}');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final model = StripeSetupIntentPaymentMethodModel.fromJson(decoded);
+      if (!model.status) {
+        throw Exception('Setup intent API returned status=false');
+      }
+      if (model.data.customerId.isEmpty || model.data.clientSecret.isEmpty) {
+        throw Exception(
+            'Missing required setup intent fields (customerId/clientSecret)');
+      }
+      return model;
+    } else {
+      String errorMessage = 'Failed to create setup intent payment method';
+      if (decoded['message'] != null) {
+        errorMessage = decoded['message'].toString();
+      } else if (decoded['error'] != null) {
+        errorMessage = decoded['error'].toString();
+      }
+      throw Exception('HTTP ${response.statusCode}: $errorMessage');
+    }
+  } catch (e) {
+    print('Error creating setup intent payment method: $e');
+    rethrow;
+  }
+}
+
 /// Create Stripe subscription via QuickShare API
 /// Endpoint: POST https://www.quickshare-apps.com/gateway-quickshare-api/stripe/create-subscription
 /// Request body: { "customerId": "...", "priceId": "...", "paymentMethodId": "..." }
@@ -2170,6 +2246,78 @@ Future<Map<String, dynamic>> createStripeSubscriptionApi({
     }
   } catch (e) {
     print('Error creating Stripe subscription: $e');
+    rethrow;
+  }
+}
+
+/// Create Stripe subscription via Cycle Menstruel Laravel API (Sanctum token)
+/// Endpoint: POST https://mobile.cycle-menstruel.com/api/quickshare/stripe/create-subscription
+/// Request body: { "customerId": "...", "priceId": "...", "paymentMethodId": "..." }
+Future<QuickshareStripeSubscriptionModel> createQuickshareStripeSubscriptionApi({
+  required String customerId,
+  required String priceId,
+  required String paymentMethodId,
+}) async {
+  try {
+    final String sanctumToken = userStore.token.trim();
+    if (sanctumToken.isEmpty) {
+      throw Exception('Sanctum token not available for current user');
+    }
+
+    const String apiUrl =
+        'https://mobile.cycle-menstruel.com/api/quickshare/stripe/create-subscription';
+    final Uri url = Uri.parse(apiUrl);
+
+    final String requestBody = jsonEncode({
+      'customerId': customerId,
+      'priceId': priceId,
+      'paymentMethodId': paymentMethodId,
+    });
+
+    print('Calling Quickshare Stripe Create Subscription API: $apiUrl');
+    print('Request body: $requestBody');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $sanctumToken',
+      },
+      body: requestBody,
+    );
+
+    print(
+        'Quickshare Stripe Create Subscription API Response - Status: ${response.statusCode}');
+    print(
+        'Quickshare Stripe Create Subscription API Response - Body: ${response.body}');
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception(
+          'Invalid response format: expected Map but got ${decoded.runtimeType}');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final model = QuickshareStripeSubscriptionModel.fromJson(decoded);
+      if (!model.status) {
+        throw Exception('Quickshare create-subscription returned status=false');
+      }
+      if (model.data.clientSecret.isEmpty) {
+        throw Exception('clientSecret not found in response');
+      }
+      return model;
+    }
+
+    String errorMessage = 'Failed to create Quickshare Stripe subscription';
+    if (decoded['message'] != null) {
+      errorMessage = decoded['message'].toString();
+    } else if (decoded['error'] != null) {
+      errorMessage = decoded['error'].toString();
+    }
+    throw Exception('HTTP ${response.statusCode}: $errorMessage');
+  } catch (e) {
+    print('Error creating Quickshare Stripe subscription: $e');
     rethrow;
   }
 }
@@ -2816,10 +2964,7 @@ Future<Map<String, dynamic>> authenticateMobilePaymentLocalNumber({
   }
 }
 
-/// Returns stored mobile payment auth token.
-String getStoredMobilePaymentToken() {
-  return getStringAsync(KEY_MOBILE_PAYMENT_TOKEN);
-}
+
 
 /// Chatbot message API. Call after obtaining token via [chatBackendApi].
 /// Endpoint: POST https://www.quickshare-apps.com/chat-backend/api/chat/message
@@ -2891,6 +3036,246 @@ Future<ChatMessageResponseModel> sendChatMessageApi({
     String errorMessage = 'Chat message request failed';
     try {
       final errorData = jsonDecode(response.body);
+      if (errorData is Map && errorData.containsKey('message')) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map && errorData.containsKey('error')) {
+        errorMessage = errorData['error'].toString();
+      }
+    } catch (_) {}
+
+    throw Exception('HTTP ${response.statusCode}: $errorMessage');
+  } catch (e) {
+    rethrow;
+  }
+}
+
+
+/// Returns stored mobile payment auth token.
+String getStoredMobilePaymentToken() {
+  return getStringAsync(KEY_MOBILE_PAYMENT_TOKEN);
+}
+
+/// Create a mobile money account for the provided msisdn.
+/// Endpoint: POST https://api.quickshare-app.io/quickshare-api/connector/api/v1/{msisdn}/accountcreate
+Future<Map<String, dynamic>> createMobilePaymentAccountApi({
+  required String msisdn,
+  required String name,
+  required String phone,
+}) async {
+  try {
+    final String normalizedPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    if (msisdn.trim().isEmpty) {
+      throw Exception('Invalid msisdn');
+    }
+
+    final String token = getStoredMobilePaymentToken();
+    if (token.isEmpty) {
+      throw Exception('Mobile payment token not found. Authenticate first.');
+    }
+
+    final String apiUrl =
+        'https://api.quickshare-app.io/quickshare-api/connector/api/v1/{msisdn}/accountcreate';
+    final Uri url = Uri.parse(apiUrl);
+
+    final Map<String, dynamic> requestBody = {
+      'noms': name,
+      'prenom': name,
+      'countrylocation': 'CD',
+      'pinapplication': null,
+      'translimit': null,
+      'phoneserial': null,
+      'updateddate': null,
+      'contactnumber': normalizedPhone,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      return responseData is Map<String, dynamic>
+          ? responseData
+          : responseData is Map
+              ? Map<String, dynamic>.from(responseData)
+              : <String, dynamic>{'raw': response.body};
+    }
+
+    String errorMessage = 'Account creation failed';
+    try {
+      final errorData = jsonDecode(response.body);
+      if (errorData is Map && errorData.containsKey('resultDesc')) {
+        final dynamic resultDesc = errorData['resultDesc'];
+        if (resultDesc != null && resultDesc.toString().isNotEmpty) {
+          errorMessage = resultDesc.toString();
+        }
+      }
+      if (errorData is Map && errorData.containsKey('message')) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map && errorData.containsKey('error')) {
+        errorMessage = errorData['error'].toString();
+      }
+    } catch (_) {}
+
+    throw Exception('HTTP ${response.statusCode}: $errorMessage');
+  } catch (e) {
+    rethrow;
+  }
+}
+
+/// Initialize mobile payment after account creation.
+/// Endpoint: POST https://api.quickshare-app.io/quickshare-api/connector/api/v1/852112327/payInSender
+/// Expected success response:
+/// {"responsecode":"001","responsedesc":"Paiement Initié","transactionid":"..."}
+Future<MobilePaymentInitializationModel> initializeMobilePaymentApi({
+  required String phone,
+  required String name,
+  required String amount,
+}) async {
+  try {
+    final String normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (normalizedPhone.isEmpty) {
+      throw Exception('Invalid phone number');
+    }
+
+    final String token = getStoredMobilePaymentToken();
+    if (token.isEmpty) {
+      throw Exception('Mobile payment token not found. Authenticate first.');
+    }
+
+    final String apiUrl =
+        'https://api.quickshare-app.io/quickshare-api/connector/api/v1/$normalizedPhone/payInSender';
+    final Uri url = Uri.parse(apiUrl);
+
+    final Map<String, dynamic> requestBody = {
+      'mobilesender': normalizedPhone,
+      'codepin': 'OMoney-Direct',
+      'expiredperiod': '2020-12-28;B587M',
+      'mobilereceiver': normalizedPhone,
+      'amountpaid': '$amount.0',
+      'quickaction': 'ePayment-Marchand',
+      'clientid': normalizedPhone,
+      'countrylocation': 'CD',
+      'trcomments_nbre': '+$normalizedPhone',
+      'trcomments': 'null',
+      'udevise': 'USD',
+      'saccountnumber': normalizedPhone,
+      'noms': name,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      if (responseData is Map<String, dynamic>) {
+        return MobilePaymentInitializationModel.fromJson(responseData);
+      }
+      if (responseData is Map) {
+        return MobilePaymentInitializationModel.fromJson(
+          Map<String, dynamic>.from(responseData),
+        );
+      }
+      throw Exception('Invalid mobile payment initialization response');
+    }
+
+    String errorMessage = 'Payment initialization failed';
+    try {
+      final errorData = jsonDecode(response.body);
+      if (errorData is Map && errorData.containsKey('responsedesc')) {
+        final dynamic responseDesc = errorData['responsedesc'];
+        if (responseDesc != null && responseDesc.toString().isNotEmpty) {
+          errorMessage = responseDesc.toString();
+        }
+      }
+      if (errorData is Map && errorData.containsKey('resultDesc')) {
+        final dynamic resultDesc = errorData['resultDesc'];
+        if (resultDesc != null && resultDesc.toString().isNotEmpty) {
+          errorMessage = resultDesc.toString();
+        }
+      }
+      if (errorData is Map && errorData.containsKey('message')) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map && errorData.containsKey('error')) {
+        errorMessage = errorData['error'].toString();
+      }
+    } catch (_) {}
+
+    throw Exception('HTTP ${response.statusCode}: $errorMessage');
+  } catch (e) {
+    rethrow;
+  }
+}
+
+/// Validate mobile payment status.
+/// Endpoint: GET https://api.quickshare-app.io/quickshare-api/connector/api/{sysTID}/v1/validatePayment
+/// Expected response:
+/// {"responsecode":"002","responsedesc":"Paiement En Cours","transactionid":"..."}
+Future<MobilePaymentInitializationModel> validateMobilePaymentApi({
+  required String transactionId,
+}) async {
+  try {
+    final String normalizedTransactionId = transactionId.trim();
+    if (normalizedTransactionId.isEmpty) {
+      throw Exception('Invalid transaction id');
+    }
+
+    final String token = getStoredMobilePaymentToken();
+    if (token.isEmpty) {
+      throw Exception('Mobile payment token not found. Authenticate first.');
+    }
+
+    final String apiUrl =
+        'https://api.quickshare-app.io/quickshare-api/connector/api/$normalizedTransactionId/v1/validatePayment';
+    final Uri url = Uri.parse(apiUrl);
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      if (responseData is Map<String, dynamic>) {
+        return MobilePaymentInitializationModel.fromJson(responseData);
+      }
+      if (responseData is Map) {
+        return MobilePaymentInitializationModel.fromJson(
+          Map<String, dynamic>.from(responseData),
+        );
+      }
+      throw Exception('Invalid mobile payment validation response');
+    }
+
+    String errorMessage = 'Payment validation failed';
+    try {
+      final errorData = jsonDecode(response.body);
+      if (errorData is Map && errorData.containsKey('responsedesc')) {
+        final dynamic responseDesc = errorData['responsedesc'];
+        if (responseDesc != null && responseDesc.toString().isNotEmpty) {
+          errorMessage = responseDesc.toString();
+        }
+      }
+      if (errorData is Map && errorData.containsKey('resultDesc')) {
+        final dynamic resultDesc = errorData['resultDesc'];
+        if (resultDesc != null && resultDesc.toString().isNotEmpty) {
+          errorMessage = resultDesc.toString();
+        }
+      }
       if (errorData is Map && errorData.containsKey('message')) {
         errorMessage = errorData['message'].toString();
       } else if (errorData is Map && errorData.containsKey('error')) {

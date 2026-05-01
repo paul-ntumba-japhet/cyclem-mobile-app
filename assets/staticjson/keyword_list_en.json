@@ -4446,7 +4446,29 @@
       {"screenId": "60", "keyword_id": 899, "keyword_name": "chatPeriodDateRequiredMessage", "keyword_value": "Welcome to the cycleM assistant. You must submit your last period date to use the chat features."},
       {"screenId": "60", "keyword_id": 900, "keyword_name": "chatSubmitDateButton", "keyword_value": "Submit your date"},
       {"screenId": "60", "keyword_id": 901, "keyword_name": "chatRefreshCycleMessage", "keyword_value": "You must refresh your cycle by submitting the date of your most recent period."},
-      {"screenId": "60", "keyword_id": 902, "keyword_name": "chatRefreshCycleButton", "keyword_value": "Refresh Cycle"}
+      {"screenId": "60", "keyword_id": 902, "keyword_name": "chatRefreshCycleButton", "keyword_value": "Refresh Cycle"},
+      {"screenId": "60", "keyword_id": 903, "keyword_name": "mobileMoneyCheckoutTitle", "keyword_value": "Mobile Money Checkout"},
+      {"screenId": "60", "keyword_id": 904, "keyword_name": "mobileMoneyTrialPlan", "keyword_value": "Trial"},
+      {"screenId": "60", "keyword_id": 905, "keyword_name": "mobileMoneyMonthlyPlan", "keyword_value": "Monthly"},
+      {"screenId": "60", "keyword_id": 906, "keyword_name": "mobileMoneyAnnualPlan", "keyword_value": "Annual"},
+      {"screenId": "60", "keyword_id": 907, "keyword_name": "mobileMoneyTrialFeatureBasic", "keyword_value": "Basic features"},
+      {"screenId": "60", "keyword_id": 908, "keyword_name": "mobileMoneyTrialFeatureDuration", "keyword_value": "Trial duration: 3 days"},
+      {"screenId": "60", "keyword_id": 909, "keyword_name": "mobileMoneyFeatureFullAccess", "keyword_value": "Full premium access"},
+      {"screenId": "60", "keyword_id": 910, "keyword_name": "mobileMoneyFeaturePersonalizedAdvice", "keyword_value": "Personalized advice"},
+      {"screenId": "60", "keyword_id": 911, "keyword_name": "mobileMoneyFeatureAdvancedNotifications", "keyword_value": "Advanced notifications"},
+      {"screenId": "60", "keyword_id": 912, "keyword_name": "mobileMoneyFeatureSupport", "keyword_value": "Support"},
+      {"screenId": "60", "keyword_id": 913, "keyword_name": "mobileMoneyFeaturePrioritySupport", "keyword_value": "Priority support"},
+      {"screenId": "60", "keyword_id": 914, "keyword_name": "mobileMoneySaveLabel", "keyword_value": "Save %s"},
+      {"screenId": "60", "keyword_id": 915, "keyword_name": "mobileMoneyRdcSubtitle", "keyword_value": "RDC Mobile"},
+      {"screenId": "60", "keyword_id": 916, "keyword_name": "mobileMoneyPaymentInitialized", "keyword_value": "Payment request initialized for %plan% with %operator%."},
+      {"screenId": "60", "keyword_id": 917, "keyword_name": "mobileMoneyInitFailed", "keyword_value": "Unable to initialize mobile payment."},
+      {"screenId": "60", "keyword_id": 918, "keyword_name": "mobileMoneySecureTitle", "keyword_value": "100% Secure Payment"},
+      {"screenId": "60", "keyword_id": 919, "keyword_name": "mobileMoneySecureSubtitle", "keyword_value": "No banking data is stored on this screen."},
+      {"screenId": "60", "keyword_id": 920, "keyword_name": "mobileMoneyBeforeConfirmTitle", "keyword_value": "Before confirming"},
+      {"screenId": "60", "keyword_id": 921, "keyword_name": "mobileMoneyBeforeConfirmSubtitle", "keyword_value": "Make sure your mobile money account has enough balance."},
+      {"screenId": "60", "keyword_id": 922, "keyword_name": "mobileMoneyPayWith", "keyword_value": "Pay with"},
+      {"screenId": "60", "keyword_id": 923, "keyword_name": "mobileMoneyPerMonth", "keyword_value": "/ month"},
+      {"screenId": "60", "keyword_id": 924, "keyword_name": "mobileMoneyMostPopular", "keyword_value": "Most popular"}
     ]
   }
 ]

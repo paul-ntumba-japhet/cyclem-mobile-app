@@ -882,4 +882,27 @@ class BaseLanguage {
   String get chatSubmitDateButton => getContentValueFromKey(900);
   String get chatRefreshCycleMessage => getContentValueFromKey(901);
   String get chatRefreshCycleButton => getContentValueFromKey(902);
+  String get mobileMoneyCheckoutTitle => getContentValueFromKey(903);
+  String get mobileMoneyTrialPlan => getContentValueFromKey(904);
+  String get mobileMoneyMonthlyPlan => getContentValueFromKey(905);
+  String get mobileMoneyAnnualPlan => getContentValueFromKey(906);
+  String get mobileMoneyTrialFeatureBasic => getContentValueFromKey(907);
+  String get mobileMoneyTrialFeatureDuration => getContentValueFromKey(908);
+  String get mobileMoneyFeatureFullAccess => getContentValueFromKey(909);
+  String get mobileMoneyFeaturePersonalizedAdvice => getContentValueFromKey(910);
+  String get mobileMoneyFeatureAdvancedNotifications =>
+      getContentValueFromKey(911);
+  String get mobileMoneyFeatureSupport => getContentValueFromKey(912);
+  String get mobileMoneyFeaturePrioritySupport => getContentValueFromKey(913);
+  String get mobileMoneySaveLabel => getContentValueFromKey(914);
+  String get mobileMoneyRdcSubtitle => getContentValueFromKey(915);
+  String get mobileMoneyPaymentInitialized => getContentValueFromKey(916);
+  String get mobileMoneyInitFailed => getContentValueFromKey(917);
+  String get mobileMoneySecureTitle => getContentValueFromKey(918);
+  String get mobileMoneySecureSubtitle => getContentValueFromKey(919);
+  String get mobileMoneyBeforeConfirmTitle => getContentValueFromKey(920);
+  String get mobileMoneyBeforeConfirmSubtitle => getContentValueFromKey(921);
+  String get mobileMoneyPayWith => getContentValueFromKey(922);
+  String get mobileMoneyPerMonth => getContentValueFromKey(923);
+  String get mobileMoneyMostPopular => getContentValueFromKey(924);
 }

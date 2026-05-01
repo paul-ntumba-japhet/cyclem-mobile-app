@@ -549,13 +549,8 @@ class _SettingScreenState extends State<SettingScreen>
   }
 
   String get _displayUserName {
-    final primaryName =
-        '${userStore.user?.firstName ?? ''} ${userStore.user?.lastName ?? ''}'
-            .trim();
+    final primaryName = userStore.user?.displayName?.trim() ?? '';
     if (primaryName.isNotEmpty) return primaryName;
-
-    final storeName = '${userStore.fName} ${userStore.lName}'.trim();
-    if (storeName.isNotEmpty) return storeName;
 
     final onboardingName = questionsModelData?.step3PersonalInfo.fullName?.trim() ?? '';
     if (onboardingName.isNotEmpty) return onboardingName;

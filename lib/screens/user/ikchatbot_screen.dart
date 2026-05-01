@@ -7,6 +7,7 @@ import '../../extensions/extensions.dart';
 import '../../extensions/shared_pref.dart';
 import '../../main.dart';
 import '../../network/rest_api.dart';
+import '../../screens/payment/mobile_money_checkout.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_images.dart';
 import '../../utils/app_constants.dart';
@@ -224,7 +225,10 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
       phoneNumber: fullPhoneNumber,
       dateRegle: dateRegle,
       onMobilePaymentRedirect: () {
-        toast(language.mustPayBeforeSubmittingDate);
+        MobileMoneyCheckoutScreen(
+          phoneNumber: fullPhoneNumber,
+          dateRegle: dateRegle,
+        ).launch(context);
       },
       onError: (msg) {
         toast(msg.isNotEmpty ? msg : language.anErrorHasOccurred);
@@ -422,8 +426,17 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
     // Save messages after adding user message
     _saveChatHistory();
 
-    // Call chatbot API
-    _fetchBotResponse(userInput);
+    // For unsupported free-typed requests, do not call API.
+    // Show a local fallback message instead.
+    setState(() {
+      _messages.insert(0, ChatMessage(
+        text:
+            'Désolé, je ne suis pas encore capable de traiter ce type de requête.',
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+    });
+    _saveChatHistory();
   }
 
   /// Find the last bot message (most recent message that is not from user)

@@ -167,7 +167,6 @@ Future<void> main() async {
   HttpOverrides.global = MyHttpOverrides();
   TerminateRestart.instance.initialize();
   sharedPreferences = await SharedPreferences.getInstance();
-
   // Initialize Stripe immediately after binding
   print('\n═══════════════════════════════════════════════════════');
   print('💳 Initializing Stripe SDK');

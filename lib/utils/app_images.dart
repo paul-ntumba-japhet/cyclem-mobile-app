@@ -142,3 +142,12 @@ const article_image_2 = 'assets/menstruation-2.avif';
 const cyclem_logo = 'assets/logocyclem.png';
 const black_logo = 'assets/cyclem_logo_black.png';
 
+// MOBILE CHECKOUT
+
+const mpesa = 'assets/mpesa.png';
+const airtel = 'assets/airtel.png';
+const orange = 'assets/orange.png';
+
+
+
+

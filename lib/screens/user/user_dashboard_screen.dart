@@ -15,6 +15,7 @@ import '../../model/user/dashboard_response.dart';
 import '../../network/rest_api.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
 import '../../service/phone_verification_service.dart';
+import '../payment/mobile_money_checkout.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
@@ -383,13 +384,10 @@ class DashboardScreenState extends State<DashboardScreen> {
           dateRegle: DateFormat('yyyy-MM-dd').format(picked),
           metadata: paymentFlowMetadata,
           onMobilePaymentRedirect: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(language.mustPayBeforeSubmittingDate),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 3),
-              ),
-            );
+            MobileMoneyCheckoutScreen(
+              phoneNumber: fullPhoneNumber,
+              dateRegle: DateFormat('yyyy-MM-dd').format(picked),
+            ).launch(context);
           },
           onError: (message) {
             ScaffoldMessenger.of(context).showSnackBar(

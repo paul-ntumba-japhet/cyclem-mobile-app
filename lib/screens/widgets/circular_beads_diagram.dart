@@ -15,7 +15,7 @@ import '../../service/phone_verification_service.dart';
 import '../../extensions/new_colors.dart';
 import '../../languageConfiguration/LanguageDataConstant.dart';
 import '../../languageConfiguration/LanguageDefaultJson.dart';
-import '../payment/checkout.dart';
+import '../payment/mobile_money_checkout.dart';
 import 'period_dates_graph.dart';
 
 class CircularBeadsDiagram extends StatefulWidget {
@@ -431,29 +431,67 @@ class _CircularBeadsDiagramState extends State<CircularBeadsDiagram> {
   }
 
   /// Handle "Activez votre collier" button click.
-  /// Redirect to Stripe checkout only if getPaymentStatusApi() returns 300 and country code is not 243.
-  /// For DRC users (country code 243): show date picker → validate → confirm → API.
+  /// Redirect behavior is handled by shouldRedirectToPaymentFlow for non-100 codes.
+  /// Date picker appears only when payment status code is 100, regardless of country.
   Future<void> _handleActivateCollier() async {
     if (!mounted) return;
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final String? phone = userStore.user?.phoneNumber ?? getStringAsync(KEY_PHONE_NUMBER);
+    final String currentDateRegle = userStore.cycleInfo?.dateRegle ?? '';
 
-    if (phone != null && phone.isNotEmpty && !isDRCCountryCode(phone)) {
-      try {
-        final status = await getPaymentStatusApi(phone);
-        if (mounted && status.code == '300') {
-          StripeCheckout().launch(context);
+    if (phone == null || phone.isEmpty) return;
+
+    try {
+      final metadata = await getPaymentFlowMetadata(
+        phoneNumber: phone,
+        dateRegle: currentDateRegle,
+      );
+
+      // Only payment code 100 should continue to period date submission flow.
+      if (metadata.paymentStatus.code != '100') {
+        bool mobileRedirectTriggered = false;
+        final decision = await shouldRedirectToPaymentFlow(
+          context: context,
+          phoneNumber: phone,
+          dateRegle: currentDateRegle,
+          metadata: metadata,
+          onMobilePaymentRedirect: () {
+            mobileRedirectTriggered = true;
+            MobileMoneyCheckoutScreen(
+              phoneNumber: phone,
+              dateRegle: currentDateRegle,
+            ).launch(context);
+          },
+          onError: (message) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+        );
+
+        // Safety fallback if helper returns redirectedToMobile without invoking callback.
+        if (decision == PaymentFlowDecision.redirectedToMobile &&
+            !mobileRedirectTriggered &&
+            mounted) {
+          MobileMoneyCheckoutScreen(
+            phoneNumber: phone,
+            dateRegle: currentDateRegle,
+          ).launch(context);
         }
-      } catch (_) {
-        if (mounted) {
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text('${language.errorLabel}: ${language.failedToLoadTransactions}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        return;
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('${language.errorLabel}: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
       return;
     }

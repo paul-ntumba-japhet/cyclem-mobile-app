@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:intl/intl.dart';
 import '../../extensions/extensions.dart';
 import '../../extensions/new_colors.dart';
+import '../../extensions/shared_pref.dart';
 import '../../utils/app_images.dart';
 import '../../utils/app_common.dart';
+import '../../utils/app_constants.dart';
 import '../../network/rest_api.dart';
 import '../../model/user/payment_plan_model.dart';
-import 'pay.dart';
+import '../../model/user/cycle_info_model.dart';
+import '../../service/stripe_payment_sheet_service.dart';
+import '../../service/phone_verification_service.dart';
+import '../../utils/period_date_validation.dart';
+import '../user/user_dashboard_screen.dart';
+import '../../main.dart';
 
 class StripeCheckout extends StatefulWidget {
   const StripeCheckout({super.key});
@@ -24,6 +32,247 @@ class _StripeCheckoutState extends State<StripeCheckout> {
   PaymentPlanModel? _selectedPlan;
   bool _isLoadingPlans = false;
   String _errorMessage = '';
+
+  static void _showPaymentLoadingOverlay(BuildContext context,
+      {String message = 'Chargement...'}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (BuildContext ctx) {
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(primaryColor),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: mainColorText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static void _hidePaymentLoadingOverlay(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _showDateConfirmationDialogAfterPayment(
+    DateTime selectedDay,
+    ScaffoldMessengerState scaffoldMessenger,
+  ) async {
+    final periodDate = DateFormat('yyyy-MM-dd').format(selectedDay);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(language.dateSelected),
+          content: Text(periodDate),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(language.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              child: Text(language.next),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    _showPaymentLoadingOverlay(context, message: 'Enregistrement en cours...');
+
+    String fullPhoneNumber = userStore.user?.phoneNumber ?? '';
+    fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    if (!fullPhoneNumber.startsWith('+') && fullPhoneNumber.isNotEmpty) {
+      fullPhoneNumber = '+$fullPhoneNumber';
+    }
+    if (fullPhoneNumber.isEmpty) {
+      if (mounted) _hidePaymentLoadingOverlay(context);
+      toast('Phone number not found. Please sign in again.');
+      return;
+    }
+
+    const bool q1 = true;
+    const bool q2 = true;
+    const bool q3 = false;
+
+    final success =
+        await PhoneVerificationService.createSubscriptionWithPeriodDate(
+      phoneNumber: fullPhoneNumber,
+      periodDate: periodDate,
+      question1Answer: q1,
+      question2Answer: q2,
+      question3Answer: q3,
+    );
+
+    if (!mounted) return;
+    _hidePaymentLoadingOverlay(context);
+
+    if (success) {
+      final phoneForAPI = fullPhoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      await userStore.setPeriodDate(periodDate);
+      final existingCycleInfo =
+          userStore.cycleInfo ?? loadCycleInfoForPhone(phoneForAPI);
+      final updatedCycleInfo = CycleInfoModel(
+        dateCreation: existingCycleInfo?.dateCreation,
+        dateFertiStart: existingCycleInfo?.dateFertiStart,
+        dateFertireqEnd: existingCycleInfo?.dateFertireqEnd,
+        dateRegle: periodDate,
+        dateProchaineReglesStart: existingCycleInfo?.dateProchaineReglesStart,
+        dateProchaineReglesEnd: existingCycleInfo?.dateProchaineReglesEnd,
+      );
+      await userStore.setCycleInfo(updatedCycleInfo);
+      await saveCycleInfoForPhone(phoneForAPI, updatedCycleInfo);
+      await setValue(KEY_CYCLE_INFO, updatedCycleInfo.toJson());
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Subscription and period date saved successfully.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      appStore.setHomeScreenUpdated(true);
+      DashboardScreen(currentIndex: 0).launch(context, isNewTask: true);
+    } else {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save period date. Please try again.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<Map<String, String>?> _startPaymentSheetForSelectedPlan(
+      PaymentPlanModel plan) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final String rawName = userStore.user?.displayName?.trim() ?? '';
+    final String name = rawName.isNotEmpty
+        ? rawName
+        : 'Customer';
+
+    final String rawEmail =
+        (userStore.user?.email ?? userStore.email).trim();
+    final String email = rawEmail.isNotEmpty ? rawEmail : 'customer@example.com';
+
+    final String rawPhone =
+        (userStore.user?.phoneNumber ?? getStringAsync(KEY_PHONE_NUMBER))
+            .replaceAll(RegExp(r'[^\d]'), '');
+    final String phone = rawPhone.isNotEmpty ? rawPhone : '243000000000';
+
+    final paymentRegistrationResult =
+        await StripePaymentSheetService.presentSetupIntentPaymentSheet(
+      context: context,
+      name: name,
+      email: email,
+      phone: phone,
+    );
+
+    if (!mounted) return null;
+    if (paymentRegistrationResult == null ||
+        paymentRegistrationResult.paymentMethodId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment method registration cancelled or failed.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return null;
+    }
+
+    final result = <String, String>{
+      'customer_id': paymentRegistrationResult.customerId,
+      'price_id': plan.priceIdStripe,
+      'paymentMathodId': paymentRegistrationResult.paymentMethodId,
+    };
+
+    print('✅ Checkout PaymentSheet result: $result');
+
+    _showPaymentLoadingOverlay(context, message: 'Chargement...');
+    try {
+      final sub = await createQuickshareStripeSubscriptionApi(
+        customerId: result['customer_id']!,
+        priceId: result['price_id']!,
+        paymentMethodId: result['paymentMathodId']!,
+      );
+      if (!mounted) return result;
+      _hidePaymentLoadingOverlay(context);
+
+      if (sub.status) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final firstDate = today.subtract(const Duration(days: 33));
+
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: today,
+          firstDate: firstDate,
+          lastDate: today,
+          helpText: language.dateSelected,
+        );
+        if (picked == null || !mounted) return result;
+
+        final validation = validateLastPeriodDate(picked);
+        if (!validation.isValid) {
+          toast(validation.errorMessage ?? periodDateValidationErrorTooOld);
+          return result;
+        }
+
+        await _showDateConfirmationDialogAfterPayment(
+            picked, scaffoldMessenger);
+      }
+    } catch (e) {
+      if (mounted) _hidePaymentLoadingOverlay(context);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    return result;
+  }
 
   // Testimonial slides data
   final List<Map<String, List<String>>> _testimonialSlides = [
@@ -350,15 +599,8 @@ class _StripeCheckoutState extends State<StripeCheckout> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: planToUse != null
-            ? () {
-                // Navigate to pay screen with the selected plan (or default first plan)
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PayScreen(
-                      paymentPlan: planToUse,
-                    ),
-                  ),
-                );
+            ? () async {
+                await _startPaymentSheetForSelectedPlan(planToUse);
               }
             : null,
         style: ElevatedButton.styleFrom(
