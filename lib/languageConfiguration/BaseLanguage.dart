@@ -905,4 +905,6 @@ class BaseLanguage {
   String get mobileMoneyPayWith => getContentValueFromKey(922);
   String get mobileMoneyPerMonth => getContentValueFromKey(923);
   String get mobileMoneyMostPopular => getContentValueFromKey(924);
+  String get accountAlreadyExistsRedirectMessage => getContentValueFromKey(925);
+  String get accountNotAvailableCreateOneMessage => getContentValueFromKey(926);
 }

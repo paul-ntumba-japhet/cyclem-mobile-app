@@ -37,7 +37,7 @@
           "screenId": "2",
           "keyword_id": 6,
           "keyword_name": "youAndEra",
-          "keyword_value": "Vous et"
+          "keyword_value": "Vous et CycleM"
         },
         {
           "screenId": "2",
@@ -2926,7 +2926,7 @@
           "screenId": "51",
           "keyword_id": 364,
           "keyword_name": "areYouSureYouWantToSwitchYourGoalType",
-          "keyword_value": "Are you sure you want to switch your goal type?"
+          "keyword_value": "Cette fonctionnalite n'est pas encore disponible. Nous vous informerons lorsqu'elle sera prete."
         },
         {
           "screenId": "51",
@@ -4114,13 +4114,13 @@
           "screenId": "59",
           "keyword_id": 727,
           "keyword_name": "step1UsingEra",
-          "keyword_value": "Étape 1: Utilisation d'Era"
+          "keyword_value": "Étape 1: Utilisation de CycleM"
         },
         {
           "screenId": "59",
           "keyword_id": 728,
           "keyword_name": "areYouUsingEraForYourself",
-          "keyword_value": "Utilisez-vous Era pour vous-même?"
+          "keyword_value": "Utilisez-vous CycleM pour vous-même?"
         },
         {
           "screenId": "59",
@@ -4329,7 +4329,7 @@
         {"screenId": "60", "keyword_id": 768, "keyword_name": "lowRiskPeriod", "keyword_value": "Période à faible risque de grossesse"},
         {"screenId": "60", "keyword_id": 769, "keyword_name": "highRiskPeriod", "keyword_value": "Période à risque élevé de grossesse"},
         {"screenId": "60", "keyword_id": 770, "keyword_name": "nextPeriodDateLabel", "keyword_value": "Date prévue des prochaines règles"},
-        {"screenId": "60", "keyword_id": 771, "keyword_name": "periodDateSavedSuccess", "keyword_value": "Date des règles enregistrée avec succès."},
+        {"screenId": "60", "keyword_id": 771, "keyword_name": "periodDateSavedSuccess", "keyword_value": "Votre nouvelle date a été enregistrée avec succès"},
         {"screenId": "60", "keyword_id": 772, "keyword_name": "failedToSavePeriodDate", "keyword_value": "Échec de l'enregistrement. Veuillez réessayer."},
         {"screenId": "60", "keyword_id": 773, "keyword_name": "phoneNotAvailablePleaseReconnect", "keyword_value": "Numéro de téléphone non disponible. Veuillez vous reconnecter."},
         {"screenId": "60", "keyword_id": 774, "keyword_name": "errorLabel", "keyword_value": "Erreur"},
@@ -4347,7 +4347,7 @@
         {"screenId": "60", "keyword_id": 786, "keyword_name": "loading", "keyword_value": "Chargement..."},
         {"screenId": "60", "keyword_id": 787, "keyword_name": "saving", "keyword_value": "Enregistrement en cours..."},
         {"screenId": "60", "keyword_id": 788, "keyword_name": "subscriptionAndPeriodDateSaved", "keyword_value": "Abonnement et date des règles enregistrés avec succès."},
-        {"screenId": "60", "keyword_id": 789, "keyword_name": "failedToSavePeriodDatePleaseTryAgain", "keyword_value": "Échec de l'enregistrement de la date des règles. Veuillez réessayer."},
+        {"screenId": "60", "keyword_id": 789, "keyword_name": "failedToSavePeriodDatePleaseTryAgain", "keyword_value": "Votre cycle actuel est encore en cours, si vous avez vu vos règles tout de même, veuillez nous contacter"},
         {"screenId": "60", "keyword_id": 790, "keyword_name": "firstDayPeriod", "keyword_value": "1er jour règles"},
         {"screenId": "60", "keyword_id": 791, "keyword_name": "day27", "keyword_value": "Apparition de prochaines règles"},
         {"screenId": "60", "keyword_id": 792, "keyword_name": "calendarLabel", "keyword_value": "Calendrier"},
@@ -4468,7 +4468,9 @@
         {"screenId": "60", "keyword_id": 921, "keyword_name": "mobileMoneyBeforeConfirmSubtitle", "keyword_value": "Assurez-vous que votre compte mobile money dispose d'un solde suffisant."},
         {"screenId": "60", "keyword_id": 922, "keyword_name": "mobileMoneyPayWith", "keyword_value": "Payer avec"},
         {"screenId": "60", "keyword_id": 923, "keyword_name": "mobileMoneyPerMonth", "keyword_value": "/ mois"},
-        {"screenId": "60", "keyword_id": 924, "keyword_name": "mobileMoneyMostPopular", "keyword_value": "Le plus populaire"}
+        {"screenId": "60", "keyword_id": 924, "keyword_name": "mobileMoneyMostPopular", "keyword_value": "Le plus populaire"},
+        {"screenId": "60", "keyword_id": 925, "keyword_name": "accountAlreadyExistsRedirectMessage", "keyword_value": "Ce compte existe déjà, vous allez être redirigé vers l'écran de connexion."},
+        {"screenId": "60", "keyword_id": 926, "keyword_name": "accountNotAvailableCreateOneMessage", "keyword_value": "Ce compte n'est pas disponible, veuillez le créer."}
       ]
     }
   ]

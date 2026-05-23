@@ -7,8 +7,8 @@ import '../../extensions/extensions.dart';
 import '../../extensions/shared_pref.dart';
 import '../../main.dart';
 import '../../network/rest_api.dart';
-import '../../screens/payment/mobile_money_checkout.dart';
 import '../../utils/app_common.dart';
+import '../../utils/activate_collier_flow.dart';
 import '../../utils/app_images.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
@@ -211,32 +211,11 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
     }
   }
 
-  Future<void> _handleRefreshCycleAction(ChatMessage message) async {
-    final String fullPhoneNumber =
-        userStore.user?.phoneNumber ?? getStringAsync(KEY_PHONE_NUMBER);
-    if (fullPhoneNumber.isEmpty) {
-      toast(language.phoneNotFoundReconnect);
-      return;
-    }
-
-    final String dateRegle = userStore.cycleInfo?.dateRegle?.trim() ?? '';
-    final decision = await shouldRedirectToPaymentFlow(
-      context: context,
-      phoneNumber: fullPhoneNumber,
-      dateRegle: dateRegle,
-      onMobilePaymentRedirect: () {
-        MobileMoneyCheckoutScreen(
-          phoneNumber: fullPhoneNumber,
-          dateRegle: dateRegle,
-        ).launch(context);
-      },
-      onError: (msg) {
-        toast(msg.isNotEmpty ? msg : language.anErrorHasOccurred);
-      },
-    );
-
-    if (decision == PaymentFlowDecision.noRedirectAllowed) {
-      await _showDatePicker(message);
+  Future<void> _handleRefreshCycleAction() async {
+    final result = await runActivateCollierFlow(context: context);
+    if (!mounted) return;
+    if (result == ActivateCollierFlowResult.saved) {
+      await _refreshChatAfterCycleUpdate();
     }
   }
 
@@ -1060,7 +1039,7 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
                         if (normalizedReply == language.chatRefreshCycleButton.toLowerCase().trim() ||
                             normalizedReply == 'refresh cycle' ||
                             normalizedReply == 'actualiser le cycle') {
-                          _handleRefreshCycleAction(message);
+                          _handleRefreshCycleAction();
                           return;
                         }
                         setState(() {
@@ -1325,6 +1304,7 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
         question1Answer: q1,
         question2Answer: q2,
         question3Answer: q3,
+        suppressFailureToast: true,
       );
 
       if (!mounted) return;
@@ -1332,7 +1312,7 @@ class _IkChatbotScreenState extends State<IkChatbotScreen> {
         setState(() {
           if (_messages.isNotEmpty && _messages.first.isLoading) _messages.removeAt(0);
           _messages.insert(0, ChatMessage(
-            text: language.serverErrorTryAgain,
+            text: language.failedToSavePeriodDatePleaseTryAgain,
             isUser: false,
             timestamp: DateTime.now(),
           ));

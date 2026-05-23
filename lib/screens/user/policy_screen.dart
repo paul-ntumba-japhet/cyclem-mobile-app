@@ -47,7 +47,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
         children: [
           Image.asset(black_logo, fit: BoxFit.fill, height: 100),
           28.height,
-          Text("${language.youAndEra} CycleM", style: boldTextStyle(size: 24)),
+          Text(language.youAndEra, style: boldTextStyle(size: 24)),
           14.height,
           Text(
             "${language.policyDeclaration}.",

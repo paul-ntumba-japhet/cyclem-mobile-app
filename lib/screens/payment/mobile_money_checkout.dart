@@ -109,8 +109,8 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
       final List<PaymentPlanModel> apiPlans = await getPaymentPlansApi('USD');
       if (!mounted) return;
 
-      // API returns plans in reverse order for this screen.
-      final List<PaymentPlanModel> orderedPlans = apiPlans.reversed.toList();
+      final List<PaymentPlanModel> orderedPlans =
+          orderPaymentPlansForDisplay(apiPlans);
       final List<_MobilePlan> updatedPlans = List<_MobilePlan>.from(_plans);
       for (int i = 0; i < updatedPlans.length && i < orderedPlans.length; i++) {
         final PaymentPlanModel apiPlan = orderedPlans[i];
@@ -182,10 +182,12 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
       message: 'Initialisation du paiement',
     );
     try {
-      await authenticateMobilePaymentLocalNumber(phoneNumber: widget.phoneNumber);
+      await authenticateMobilePaymentLocalNumber(
+          phoneNumber: widget.phoneNumber);
       final String displayName = (userStore.user?.displayName ?? '').trim();
       final String accountName = displayName.isNotEmpty ? displayName : 'User';
-      final String selectedAmount = _extractAmountFromLabel(_plans[_selectedPlanIndex].priceLabel);
+      final String selectedAmount =
+          _extractAmountFromLabel(_plans[_selectedPlanIndex].priceLabel);
       await createMobilePaymentAccountApi(
         msisdn: widget.phoneNumber,
         name: accountName,
@@ -337,10 +339,9 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(language.cancel),
             ),
-            ElevatedButton(
+            buildDateConfirmationButton(
+              label: language.next,
               onPressed: () => Navigator.of(ctx).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-              child: Text(language.next),
             ),
           ],
         );
@@ -373,7 +374,8 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
     const bool q2 = true;
     const bool q3 = false;
 
-    final success = await PhoneVerificationService.createSubscriptionWithPeriodDate(
+    final success =
+        await PhoneVerificationService.createSubscriptionWithPeriodDate(
       phoneNumber: fullPhoneNumber,
       periodDate: periodDate,
       question1Answer: q1,
@@ -433,7 +435,8 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
         backgroundColor: primaryColor,
         foregroundColor: whiteColor,
         elevation: 0,
-        title: Text(language.mobileMoneyCheckoutTitle, style: boldTextStyle(color: whiteColor, size: 18)),
+        title: Text(language.mobileMoneyCheckoutTitle,
+            style: boldTextStyle(color: whiteColor, size: 18)),
       ),
       body: Stack(
         children: [
@@ -505,7 +508,8 @@ class _MobileMoneyCheckoutScreenState extends State<MobileMoneyCheckoutScreen> {
                               )
                             : Text(
                                 '${language.mobileMoneyPayWith} $_operator',
-                                style: boldTextStyle(color: Colors.white, size: 15),
+                                style: boldTextStyle(
+                                    color: Colors.white, size: 15),
                               ),
                       ),
                     ),
@@ -639,7 +643,8 @@ class _PricingCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(plan.title, style: boldTextStyle(size: 16))),
+                Expanded(
+                    child: Text(plan.title, style: boldTextStyle(size: 16))),
                 if ((plan.highlightLabel ?? '').isNotEmpty)
                   Container(
                     padding:
@@ -671,7 +676,9 @@ class _PricingCard extends StatelessWidget {
                   children: [
                     const Icon(Icons.check_circle_outline, size: 16),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(feature, style: primaryTextStyle(size: 13))),
+                    Expanded(
+                        child:
+                            Text(feature, style: primaryTextStyle(size: 13))),
                   ],
                 ),
               ),

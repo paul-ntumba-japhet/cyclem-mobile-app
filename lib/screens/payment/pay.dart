@@ -386,16 +386,9 @@ class _PayScreenState extends State<PayScreen> {
                 style: primaryTextStyle(color: Colors.grey, size: 14),
               ),
             ),
-            ElevatedButton(
+            buildDateConfirmationButton(
+              label: language.next,
               onPressed: () => Navigator.of(ctx).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              child: Text(language.next),
             ),
           ],
         );

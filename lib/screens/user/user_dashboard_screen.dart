@@ -3,24 +3,20 @@ import 'dart:io';
 import 'package:era_flutter/utils/app_images.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:intl/intl.dart';
 import 'package:menstrual_cycle_widget/database_helper/menstrual_cycle_db_helper.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import 'package:menstrual_cycle_widget/ui/menstrual_log_period_view.dart';
 import 'package:menstrual_cycle_widget/ui/model/display_symptoms_data.dart';
 import '../../extensions/extensions.dart';
 import '../../main.dart';
-import '../../model/user/cycle_info_model.dart';
 import '../../model/user/dashboard_response.dart';
 import '../../network/rest_api.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
-import '../../service/phone_verification_service.dart';
-import '../payment/mobile_money_checkout.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/dynamic_theme.dart';
 import '../../utils/navigation_utils.dart';
-import '../../utils/period_date_validation.dart';
+import '../../utils/activate_collier_flow.dart';
 import '../../extensions/shared_pref.dart';
 import '../screens.dart';
 
@@ -180,247 +176,25 @@ class DashboardScreenState extends State<DashboardScreen> {
   /// Handle + button tap: show date picker, validate, check payment status, and update period date
   Future<void> _handlePlusButtonDatePicker() async {
     if (!mounted || _isLoadingDatePicker) return;
-
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    NavigatorState? dialogNavigator;
-
-    // Helper function to safely close the dialog
-    void closeDialog() {
-      if (mounted && dialogNavigator != null) {
-        try {
-          if (dialogNavigator!.canPop()) {
-            dialogNavigator!.pop();
-          }
-        } catch (e) {
-          // Dialog already closed or context invalid, ignore
-        }
+    setState(() {
+      _isLoadingDatePicker = true;
+    });
+    try {
+      final result = await runActivateCollierFlow(
+        context: context,
+        onSaved: () async {
+          updateConfiguration();
+        },
+      );
+      if (!mounted) return;
+      if (result == ActivateCollierFlowResult.saved) {
+        setState(() {});
       }
+    } finally {
       if (mounted) {
         setState(() {
           _isLoadingDatePicker = false;
         });
-      }
-    }
-
-    try {
-      // Step 1: Show date picker
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final firstDate = today.subtract(const Duration(days: lastPeriodDateMaxDaysAgo));
-
-      final picked = await showDatePicker(
-        context: context,
-        initialDate: today,
-        firstDate: firstDate,
-        lastDate: today,
-        helpText: language.dateSelected,
-      );
-
-      if (picked == null || !mounted) return;
-
-      // Step 2: Validate the selected date
-      final validation = validateLastPeriodDate(picked);
-      if (!validation.isValid) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(validation.errorMessage ?? periodDateValidationErrorTooOld),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Step 3: Get and format phone number
-      String fullPhoneNumber = userStore.user?.phoneNumber ?? '';
-      fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      if (!fullPhoneNumber.startsWith('+') && fullPhoneNumber.isNotEmpty) {
-        fullPhoneNumber = '+$fullPhoneNumber';
-      }
-
-      if (fullPhoneNumber.isEmpty) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(language.phoneNotAvailablePleaseReconnect),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Step 4: Check payment status (with loading)
-      setState(() {
-        _isLoadingDatePicker = true;
-      });
-
-      // Show loading dialog and store the navigator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext dialogContext) {
-          dialogNavigator = Navigator.of(dialogContext);
-          return PopScope(
-            canPop: false,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      language.pleaseWait,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-
-      PaymentFlowMetadata? paymentFlowMetadata;
-      try {
-        paymentFlowMetadata = await getPaymentFlowMetadata(
-          phoneNumber: fullPhoneNumber,
-          dateRegle: DateFormat('yyyy-MM-dd').format(picked),
-        );
-      } catch (e) {
-        if (mounted) {
-          closeDialog();
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text('${language.errorLabel}: ${language.failedToLoadTransactions}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      if (!mounted) {
-        closeDialog();
-        return;
-      }
-
-      // Step 5: Handle different payment status codes
-      if (paymentFlowMetadata.paymentStatus.code == '100') {
-        // Active payment - call subscription API
-        final periodDate = DateFormat('yyyy-MM-dd').format(picked);
-
-        // Prepare question answers (default values)
-        const bool q1 = true;
-        const bool q2 = true;
-        const bool q3 = false;
-
-        // Call subscription API
-        final success = await PhoneVerificationService.createSubscriptionWithPeriodDate(
-          phoneNumber: fullPhoneNumber,
-          periodDate: periodDate,
-          question1Answer: q1,
-          question2Answer: q2,
-          question3Answer: q3,
-        );
-
-        if (!mounted) {
-          closeDialog();
-          return;
-        }
-
-        closeDialog();
-
-        // Check if API returned status 200
-        if (success) {
-          // Subscription API returned status 200 - update period date
-          final phoneForAPI = fullPhoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-          await userStore.setPeriodDate(periodDate);
-
-          // Update cycle info
-          final existingCycleInfo = userStore.cycleInfo ?? loadCycleInfoForPhone(phoneForAPI);
-          final updatedCycleInfo = CycleInfoModel(
-            dateCreation: existingCycleInfo?.dateCreation,
-            dateFertiStart: existingCycleInfo?.dateFertiStart,
-            dateFertireqEnd: existingCycleInfo?.dateFertireqEnd,
-            dateRegle: periodDate,
-            dateProchaineReglesStart: existingCycleInfo?.dateProchaineReglesStart,
-            dateProchaineReglesEnd: existingCycleInfo?.dateProchaineReglesEnd,
-          );
-          await userStore.setCycleInfo(updatedCycleInfo);
-          await saveCycleInfoForPhone(phoneForAPI, updatedCycleInfo);
-          await setValue(KEY_CYCLE_INFO, updatedCycleInfo.toJson());
-
-          // Show success message
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(language.periodDateSavedSuccess),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-
-          // Update configuration and refresh UI
-          updateConfiguration();
-          appStore.setHomeScreenUpdated(true);
-        } else {
-          // Subscription API did not return status 200
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(language.cycleStillActive),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        closeDialog();
-        final decision = await shouldRedirectToPaymentFlow(
-          context: context,
-          phoneNumber: fullPhoneNumber,
-          dateRegle: DateFormat('yyyy-MM-dd').format(picked),
-          metadata: paymentFlowMetadata,
-          onMobilePaymentRedirect: () {
-            MobileMoneyCheckoutScreen(
-              phoneNumber: fullPhoneNumber,
-              dateRegle: DateFormat('yyyy-MM-dd').format(picked),
-            ).launch(context);
-          },
-          onError: (message) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message.isNotEmpty ? message : language.anErrorHasOccurred),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          },
-        );
-        if (decision == PaymentFlowDecision.noRedirectAllowed) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(language.anErrorHasOccurred),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-    } catch (e) {
-      if (mounted) {
-        // Close loading dialog if it's still open
-        closeDialog();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('${language.errorLabel}: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
       }
     }
   }

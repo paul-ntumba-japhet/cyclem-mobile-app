@@ -8,6 +8,7 @@
 build/
 coverage/
 doc/api/
+docs/
 
 # Generated lockfiles and package metadata
 # Keep pubspec.lock for applications (this is an app), so do NOT ignore it.

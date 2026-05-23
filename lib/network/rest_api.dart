@@ -63,6 +63,20 @@ import 'network_utils.dart';
 
 // FOR Token(Authorization) Please remove comment from the network_utils.dart file
 
+/// Thrown by [logInAsUserApi] when the login HTTP response is not successful.
+/// Use [statusCode] (e.g. 401) in the UI without parsing [bodyMessage] strings.
+class LoginHttpException implements Exception {
+  LoginHttpException(this.statusCode, [this.bodyMessage]);
+
+  final int statusCode;
+  final String? bodyMessage;
+
+  @override
+  String toString() => bodyMessage != null && bodyMessage!.isNotEmpty
+      ? 'LoginHttpException($statusCode): $bodyMessage'
+      : 'LoginHttpException($statusCode)';
+}
+
 Future<DoctorResponse> logInApi(request) async {
   Response response = await buildHttpResponse('login',
       request: request, method: HttpMethod.post);
@@ -111,40 +125,31 @@ Future<UserResponse> logInAsUserApi(request) async {
   
   // Only check for errors if status code is NOT successful
   if (!response.statusCode.isSuccessful()) {
-    print('Login failed with status: ${response.statusCode}');
+    final int httpStatus = response.statusCode;
+    print('Login failed with status: $httpStatus');
     if (response.body.isJson()) {
       var json = jsonDecode(response.body);
       // Laravel returns direct response, not wrapped in responseData
       var responseData = json['responseData'] ?? json;
-      
-      // Extract error message from response
+
       String? errorMessage;
       if (responseData is Map) {
-        errorMessage = responseData['message']?.toString() ?? 
-                      responseData['error']?.toString();
-        
+        errorMessage = responseData['message']?.toString() ??
+            responseData['error']?.toString();
+
         print('Error message extracted: $errorMessage');
-        
-        // Check for specific error codes
+
         if (responseData.containsKey('code') &&
             responseData['code'].toString().contains('invalid_username')) {
           throw 'invalid_username';
         }
-        
-        // Check for "user not registered" error (French) - ONLY if message contains it
-        if (errorMessage != null && 
-            (errorMessage.contains("n'est pas enregistre") ||
-             errorMessage.contains("not registered") ||
-             errorMessage.contains("not enrolled"))) {
-          throw Exception('USER_NOT_REGISTERED: $errorMessage');
-        }
-        
-        // Throw the error message if available
+
         if (errorMessage != null && errorMessage.isNotEmpty) {
-          throw Exception(errorMessage);
+          throw LoginHttpException(httpStatus, errorMessage);
         }
       }
     }
+    throw LoginHttpException(httpStatus, null);
   } else {
     print('Login successful with status: ${response.statusCode}');
   }
@@ -367,16 +372,28 @@ Future<UserResponse> loginWithPhoneAndCode({
     print('Login API Response - Body: ${response.body}');
 
     if (!response.statusCode.isSuccessful()) {
-      // Parse error response
+      // Parse backend error payload safely (Laravel may return only {code, message})
+      String errorMessage = 'Login failed: HTTP ${response.statusCode}';
       try {
         final errorData = jsonDecode(response.body);
-        String errorMessage = errorData['message']?.toString() ?? 
-            errorData['error']?.toString() ?? 
-            'Login failed. Please check your credentials.';
-        throw Exception(errorMessage);
-      } catch (e) {
-        throw Exception('Login failed: HTTP ${response.statusCode}');
+        if (errorData is Map<String, dynamic>) {
+          final serverMessage = errorData['message']?.toString().trim();
+          final serverError = errorData['error']?.toString().trim();
+          final serverCode = errorData['code']?.toString().trim();
+
+          if (serverMessage != null && serverMessage.isNotEmpty) {
+            errorMessage = serverMessage;
+          } else if (serverError != null && serverError.isNotEmpty) {
+            errorMessage = serverError;
+          } else if (serverCode != null && serverCode.isNotEmpty) {
+            errorMessage = 'Login failed ($serverCode)';
+          }
+        }
+      } catch (_) {
+        // Keep the HTTP fallback message when body is not valid JSON
       }
+
+      throw Exception(errorMessage);
     }
 
     // Parse successful response
@@ -387,6 +404,18 @@ Future<UserResponse> loginWithPhoneAndCode({
                           responseData['api_token']?.toString();
     
     if (sanctumToken == null || sanctumToken.isEmpty) {
+      final serverMessage = responseData['message']?.toString().trim();
+      final serverCode = responseData['code']?.toString().trim();
+      final hasCodeOnlyError = serverCode != null && serverCode.isNotEmpty;
+
+      if (serverMessage != null && serverMessage.isNotEmpty) {
+        throw Exception(serverMessage);
+      }
+
+      if (hasCodeOnlyError) {
+        throw Exception('Login failed ($serverCode)');
+      }
+
       throw Exception('Login successful but no token received');
     }
 

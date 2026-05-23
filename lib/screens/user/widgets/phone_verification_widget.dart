@@ -150,6 +150,14 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget>
       return;
     }
 
+    if (hasInvalidDrcLeadingZero(
+      countryCode: _selectedCountryCode,
+      phoneNumber: _phoneController.text.trim(),
+    )) {
+      toast(getDrcLeadingZeroErrorMessage());
+      return;
+    }
+
     if (_phoneController.text.trim().length < 8) {
       toast(language.pleaseEnterValidPhoneNumber);
       return;

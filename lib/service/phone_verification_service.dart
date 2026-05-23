@@ -516,6 +516,7 @@ class PhoneVerificationService {
     required bool question1Answer,
     required bool question2Answer,
     required bool question3Answer,
+    bool suppressFailureToast = false,
   }) async {
     try {
       print('Creating subscription with period date');
@@ -586,17 +587,21 @@ class PhoneVerificationService {
         print('Subscription with period date created successfully');
         return true;
       } else {
-        // Subscription failed
+        // Subscription failed (e.g. cycle still in progress — caller shows user-facing message)
         String errorMessage = _getApiErrorMessage(response.statusCode, response.body);
         print('Subscription API Error - Status: ${response.statusCode}, Body: ${response.body}');
-        toast('Failed to complete subscription: $errorMessage');
+        if (!suppressFailureToast) {
+          toast('Failed to complete subscription: $errorMessage');
+        }
         return false;
       }
     } catch (e, stackTrace) {
       String errorMessage = 'Error creating subscription: ${e.toString()}';
       print('Subscription exception: $e');
       print('Stack trace: $stackTrace');
-      toast(errorMessage);
+      if (!suppressFailureToast) {
+        toast(errorMessage);
+      }
       return false;
     }
   }

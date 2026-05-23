@@ -37,7 +37,7 @@
         "screenId": "2",
         "keyword_id": 6,
         "keyword_name": "youAndEra",
-        "keyword_value": "You and"
+        "keyword_value": "You and CycleM"
       },
       {
         "screenId": "2",
@@ -2926,7 +2926,7 @@
         "screenId": "51",
         "keyword_id": 364,
         "keyword_name": "areYouSureYouWantToSwitchYourGoalType",
-        "keyword_value": "Are you sure you want to switch your goal type?"
+        "keyword_value": "This feature is not yet available. We will let you know when it is ready."
       },
       {
         "screenId": "51",
@@ -4114,13 +4114,13 @@
         "screenId": "59",
         "keyword_id": 727,
         "keyword_name": "step1UsingEra",
-        "keyword_value": "Step 1: Using Era"
+        "keyword_value": "Step 1: Using CycleM"
       },
       {
         "screenId": "59",
         "keyword_id": 728,
         "keyword_name": "areYouUsingEraForYourself",
-        "keyword_value": "Are you using Era for yourself?"
+        "keyword_value": "Are you using CycleM for yourself?"
       },
       {
         "screenId": "59",
@@ -4329,7 +4329,7 @@
       {"screenId": "60", "keyword_id": 768, "keyword_name": "lowRiskPeriod", "keyword_value": "Low pregnancy risk period"},
       {"screenId": "60", "keyword_id": 769, "keyword_name": "highRiskPeriod", "keyword_value": "High pregnancy risk period"},
       {"screenId": "60", "keyword_id": 770, "keyword_name": "nextPeriodDateLabel", "keyword_value": "Expected next period date"},
-      {"screenId": "60", "keyword_id": 771, "keyword_name": "periodDateSavedSuccess", "keyword_value": "Period date saved successfully."},
+      {"screenId": "60", "keyword_id": 771, "keyword_name": "periodDateSavedSuccess", "keyword_value": "Your new date has been saved successfully"},
       {"screenId": "60", "keyword_id": 772, "keyword_name": "failedToSavePeriodDate", "keyword_value": "Failed to save. Please try again."},
       {"screenId": "60", "keyword_id": 773, "keyword_name": "phoneNotAvailablePleaseReconnect", "keyword_value": "Phone number not available. Please sign in again."},
       {"screenId": "60", "keyword_id": 774, "keyword_name": "errorLabel", "keyword_value": "Error"},
@@ -4347,7 +4347,7 @@
       {"screenId": "60", "keyword_id": 786, "keyword_name": "loading", "keyword_value": "Loading..."},
       {"screenId": "60", "keyword_id": 787, "keyword_name": "saving", "keyword_value": "Saving..."},
       {"screenId": "60", "keyword_id": 788, "keyword_name": "subscriptionAndPeriodDateSaved", "keyword_value": "Subscription and period date saved successfully."},
-      {"screenId": "60", "keyword_id": 789, "keyword_name": "failedToSavePeriodDatePleaseTryAgain", "keyword_value": "Failed to save period date. Please try again."},
+      {"screenId": "60", "keyword_id": 789, "keyword_name": "failedToSavePeriodDatePleaseTryAgain", "keyword_value": "Your current cycle is still in progress. If you have had your period anyway, please contact us."},
       {"screenId": "60", "keyword_id": 790, "keyword_name": "firstDayPeriod", "keyword_value": "1st day of period"},
       {"screenId": "60", "keyword_id": 791, "keyword_name": "day27", "keyword_value": "Next period appearance"},
       {"screenId": "60", "keyword_id": 792, "keyword_name": "calendarLabel", "keyword_value": "Calendar"},
@@ -4468,7 +4468,9 @@
       {"screenId": "60", "keyword_id": 921, "keyword_name": "mobileMoneyBeforeConfirmSubtitle", "keyword_value": "Make sure your mobile money account has enough balance."},
       {"screenId": "60", "keyword_id": 922, "keyword_name": "mobileMoneyPayWith", "keyword_value": "Pay with"},
       {"screenId": "60", "keyword_id": 923, "keyword_name": "mobileMoneyPerMonth", "keyword_value": "/ month"},
-      {"screenId": "60", "keyword_id": 924, "keyword_name": "mobileMoneyMostPopular", "keyword_value": "Most popular"}
+      {"screenId": "60", "keyword_id": 924, "keyword_name": "mobileMoneyMostPopular", "keyword_value": "Most popular"},
+      {"screenId": "60", "keyword_id": 925, "keyword_name": "accountAlreadyExistsRedirectMessage", "keyword_value": "This account already exists, you will be redirected to the login screen."},
+      {"screenId": "60", "keyword_id": 926, "keyword_name": "accountNotAvailableCreateOneMessage", "keyword_value": "This account is not available, please create it."}
     ]
   }
 ]

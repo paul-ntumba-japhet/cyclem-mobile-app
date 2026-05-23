@@ -15,6 +15,7 @@ import '../../network/rest_api.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
 import 'forgot_password_screen.dart';
+import 'questions_list_screen.dart';
 
 class UserSignInScreen extends StatefulWidget {
   const UserSignInScreen({super.key});
@@ -159,6 +160,74 @@ class _UserSignInScreenState extends State<UserSignInScreen>
     );
   }
 
+  Future<void> _showUserNotAvailableAnimationAndRedirect() async {
+    if (!mounted) return;
+
+    BuildContext? dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                duration: Duration(milliseconds: 700),
+                curve: Curves.easeOutBack,
+                tween: Tween<double>(begin: 0.6, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(scale: value, child: child);
+                },
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_add_alt_1_rounded,
+                    color: Colors.blue.shade700,
+                    size: 34,
+                  ),
+                ),
+              ),
+              16.height,
+              Text(
+                language.accountNotAvailableCreateOneMessage,
+                textAlign: TextAlign.center,
+                style: primaryTextStyle(
+                  size: 14,
+                  color: mainColorBodyText,
+                ),
+              ),
+              14.height,
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.6),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    await Future.delayed(Duration(seconds: 2));
+
+    if (dialogContext != null && Navigator.of(dialogContext!).canPop()) {
+      Navigator.of(dialogContext!).pop();
+    }
+
+    if (!mounted) return;
+    QuestionsListScreen().launch(context, isNewTask: true);
+  }
+
   Future<void> loginApi(
       {bool? isFormAutoValid, String? phoneNumber, String? password}) async {
     hideKeyboard(context);
@@ -168,6 +237,18 @@ class _UserSignInScreenState extends State<UserSignInScreen>
         ? isFormAutoValid
         : formKey.currentState!.validate();
     if (formCurrentState) {
+      if (hasInvalidDrcLeadingZero(
+        countryCode: _selectedCountryCode,
+        phoneNumber: phoneNumber ?? '',
+      )) {
+        final drcMessage = getDrcLeadingZeroErrorMessage();
+        setState(() {
+          _phoneError = drcMessage;
+        });
+        _showErrorDialog(language.loginError, drcMessage);
+        return;
+      }
+
       // Combine country code with phone number
       String fullPhoneNumber = '$_selectedCountryCode$phoneNumber';
       // Format phone number (remove + and non-digits for API)
@@ -184,7 +265,7 @@ class _UserSignInScreenState extends State<UserSignInScreen>
       
       try {
         final value = await logInAsUserApi(req);
-        
+
         if (value.status == false) {
           _setLoading(false);
           _showErrorDialog(
@@ -224,41 +305,39 @@ class _UserSignInScreenState extends State<UserSignInScreen>
         }
       } catch (e) {
         _setLoading(false);
+
+        if (e is LoginHttpException) {
+          if (e.statusCode == 401) {
+            await _showUserNotAvailableAnimationAndRedirect();
+            return;
+          }
+          _showErrorDialog(
+            language.loginError,
+            e.bodyMessage?.validate().isNotEmpty == true
+                ? e.bodyMessage!
+                : language.unableToLogin,
+          );
+          return;
+        }
+
         String errorMessage = language.unexpectedError;
         String errorTitle = language.loginError;
-        
-        // Parse error message for better user experience
         String errorStr = e.toString();
-        
-        if (errorStr.contains("invalid_username")) {
+
+        if (e == 'invalid_username' || errorStr.contains('invalid_username')) {
           errorMessage = language.invalidCredentials;
-        } else if (errorStr.contains("USER_NOT_REGISTERED") || 
-                   errorStr.contains("n'est pas enregistre") ||
-                   errorStr.contains("not registered") ||
-                   errorStr.contains("not enrolled")) {
-          errorTitle = language.userNotRegistered;
-          // Extract the actual error message
-          if (errorStr.contains("USER_NOT_REGISTERED:")) {
-            errorMessage = errorStr.split("USER_NOT_REGISTERED:")[1].trim();
-          } else {
-            errorMessage = language.phoneNotRegistered;
-          }
-        } else if (errorStr.contains("network") || errorStr.contains("connection")) {
+        } else if (errorStr.contains('network') ||
+            errorStr.contains('connection')) {
           errorMessage = language.networkError;
         } else if (errorStr.isNotEmpty) {
-          // Try to extract meaningful error message
-          if (errorStr.contains("Exception:")) {
-            errorMessage = errorStr.split("Exception:")[1].trim();
+          if (errorStr.contains('Exception:')) {
+            errorMessage = errorStr.split('Exception:')[1].trim();
           } else if (errorStr.length < 200) {
-            // Use the error message directly if it's reasonable length
-            errorMessage = errorStr.replaceAll("Exception: ", "").trim();
+            errorMessage = errorStr.replaceAll('Exception: ', '').trim();
           }
         }
-        
-        _showErrorDialog(
-          errorTitle,
-          errorMessage,
-        );
+
+        _showErrorDialog(errorTitle, errorMessage);
       }
     }
   }
@@ -393,6 +472,11 @@ class _UserSignInScreenState extends State<UserSignInScreen>
                                             setState(() {
                                               if (value.trim().isEmpty) {
                                                 _phoneError = language.phoneNumberRequired;
+                                              } else if (hasInvalidDrcLeadingZero(
+                                                countryCode: _selectedCountryCode,
+                                                phoneNumber: value.trim(),
+                                              )) {
+                                                _phoneError = getDrcLeadingZeroErrorMessage();
                                               } else if (value.trim().length < 8) {
                                                 _phoneError = language.pleaseEnterValidPhoneNumber;
                                               } else {
@@ -403,6 +487,13 @@ class _UserSignInScreenState extends State<UserSignInScreen>
                                           validator: (value) {
                                             if (value == null || value.trim().isEmpty) {
                                               _phoneError = language.phoneNumberRequired;
+                                              return _phoneError;
+                                            }
+                                            if (hasInvalidDrcLeadingZero(
+                                              countryCode: _selectedCountryCode,
+                                              phoneNumber: value.trim(),
+                                            )) {
+                                              _phoneError = getDrcLeadingZeroErrorMessage();
                                               return _phoneError;
                                             }
                                             if (value.trim().length < 8) {

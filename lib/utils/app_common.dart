@@ -123,6 +123,32 @@ bool isPeriodDateWithin32Days({
   }
 }
 
+/// Confirm button for date-selection dialogs (white label on primary background).
+Widget buildDateConfirmationButton({
+  required String label,
+  required VoidCallback onPressed,
+}) {
+  return ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: primaryColor,
+      foregroundColor: Colors.white,
+      disabledForegroundColor: Colors.white70,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(5),
+      ),
+    ),
+    child: Text(
+      label,
+      style: boldTextStyle(
+        color: Colors.white,
+        size: 14,
+        weight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
 /// Container used by payment-flow decision helpers.
 class PaymentFlowMetadata {
   final String countryCode;
@@ -292,6 +318,22 @@ printEraAppLogs(String message) {
   if (kDebugMode) {
     //printEraAppLogs("Era App Logs: $message");
   }
+}
+
+/// Returns true when a DRC number (+243) incorrectly starts with 0 after code.
+bool hasInvalidDrcLeadingZero({
+  required String countryCode,
+  required String phoneNumber,
+}) {
+  final normalizedCountryCode = countryCode.replaceAll(RegExp(r'[^\d]'), '');
+  final normalizedPhone = phoneNumber.trim();
+  return normalizedCountryCode == DRC_COUNTRY_CODE &&
+      normalizedPhone.startsWith('0');
+}
+
+/// User-facing hint for invalid DRC (+243) phone formatting.
+String getDrcLeadingZeroErrorMessage() {
+  return 'For DRC numbers (+243), remove the 0 after the country code.';
 }
 
 /// Fetch and store MenstrualCycleWidget keys from the dedicated API endpoint

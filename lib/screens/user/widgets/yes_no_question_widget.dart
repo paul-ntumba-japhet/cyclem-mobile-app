@@ -11,6 +11,8 @@ class YesNoQuestionWidget extends StatefulWidget {
   final Function()? onCompleted;
   /// When true, "No" uses green and "Yes" uses red (e.g. for "Are you breastfeeding?").
   final bool invertSelectionColor;
+  /// When true, Yes/No answer icons are swapped (e.g. breastfeeding question).
+  final bool swapAnswerIcons;
 
   const YesNoQuestionWidget({
     Key? key,
@@ -19,6 +21,7 @@ class YesNoQuestionWidget extends StatefulWidget {
     required this.onAnswerSelected,
     this.onCompleted,
     this.invertSelectionColor = false,
+    this.swapAnswerIcons = false,
   }) : super(key: key);
 
   @override
@@ -75,7 +78,9 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
                 text: language.yes,
                 isSelected: _selectedAnswer == true,
                 onTap: () => _selectAnswer(true),
-                icon: Icons.check_circle_outline,
+                icon: widget.swapAnswerIcons
+                    ? Icons.cancel_outlined
+                    : Icons.check_circle_outline,
                 color: widget.invertSelectionColor ? Colors.red : Colors.green,
               ),
               16.height,
@@ -85,7 +90,9 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
                 text: language.no,
                 isSelected: _selectedAnswer == false,
                 onTap: () => _selectAnswer(false),
-                icon: Icons.cancel_outlined,
+                icon: widget.swapAnswerIcons
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
                 color: widget.invertSelectionColor ? Colors.green : Colors.red,
               ),
             ],

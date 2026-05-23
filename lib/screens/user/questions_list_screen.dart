@@ -32,7 +32,8 @@ class QuestionsListScreen extends StatefulWidget {
   State<QuestionsListScreen> createState() => _QuestionListScreenState();
 }
 
-class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTickerProviderStateMixin {
+class _QuestionListScreenState extends State<QuestionsListScreen>
+    with SingleTickerProviderStateMixin {
   int currentStep = 1;
   bool _isPhoneVerified = false;
 
@@ -59,7 +60,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
         await saveQuestionDataForPhone(phoneForAPI, questionsModel);
         print('✅ QuestionsModel saved for phone: $phoneForAPI');
       } else {
-        print('⚠️ Cannot save questionsModel: phone number is empty after cleaning');
+        print(
+            '⚠️ Cannot save questionsModel: phone number is empty after cleaning');
       }
     } else {
       print('⚠️ Cannot save questionsModel: phone number not available');
@@ -71,32 +73,33 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
     super.initState();
     _focusedDay = DateTime.now();
     _selectedDay = _focusedDay;
-    
+
     // Initialize animation controller
     _loadingAnimationController = AnimationController(
       duration: Duration(milliseconds: 1500),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(
         parent: _loadingAnimationController,
         curve: Curves.easeInOut,
       ),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(
         parent: _loadingAnimationController,
         curve: Curves.easeInOut,
       ),
     );
-    
+
     // Restore previously selected date if available
-    if (questionsModel.step3.selectedLastPeriodDate != null && 
+    if (questionsModel.step3.selectedLastPeriodDate != null &&
         questionsModel.step3.selectedLastPeriodDate!.isNotEmpty) {
       try {
-        _selectedDay = DateFormat('yyyy-MM-dd').parse(questionsModel.step3.selectedLastPeriodDate!);
+        _selectedDay = DateFormat('yyyy-MM-dd')
+            .parse(questionsModel.step3.selectedLastPeriodDate!);
         _focusedDay = _selectedDay;
       } catch (e) {
         // If parsing fails, use current date
@@ -104,7 +107,7 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
         _focusedDay = _selectedDay;
       }
     }
-    
+
     // Check if phone is already verified
     _isPhoneVerified = questionsModel.step2Phone.isVerified ?? false;
     logScreenView("Question List screen");
@@ -172,25 +175,25 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
   bool validateStep3PersonalInfo() {
     if (currentStep == 4) {
       // Validate full name
-      if (questionsModel.step3PersonalInfo.fullName == null || 
+      if (questionsModel.step3PersonalInfo.fullName == null ||
           questionsModel.step3PersonalInfo.fullName!.trim().isEmpty) {
         toast(language.pleaseEnterFullName);
         return false;
       }
-      
+
       // Validate email
-      if (questionsModel.step3PersonalInfo.email == null || 
+      if (questionsModel.step3PersonalInfo.email == null ||
           questionsModel.step3PersonalInfo.email!.trim().isEmpty) {
         toast(language.pleaseEnterYourEmailAddress);
         return false;
       }
-      
+
       // Validate email format
       if (!questionsModel.step3PersonalInfo.email!.validateEmail()) {
         toast(language.pleaseEnterValidEmail);
         return false;
       }
-      
+
       // Mark as completed and save
       questionsModel.step3PersonalInfo.isCompleted = true;
       _saveQuestionsModel();
@@ -228,52 +231,54 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
         toast(language.pleaseSelectAnAnswer);
         return false;
       }
-      
+
       // Mark question as completed
       questionsModel.step4Question3.isCompleted = true;
       _saveQuestionsModel();
-      
+
       // Call subscription API with questionnaire answers
       // Get required data from previous steps
       String? phoneNumber = questionsModel.step2Phone.phoneNumber;
       String? countryCode = questionsModel.step2Phone.countryCode ?? "+1";
       String? email = questionsModel.step3PersonalInfo.email;
       String? name = questionsModel.step3PersonalInfo.fullName;
-      
+
       // Validate required data
       if (phoneNumber == null || phoneNumber.isEmpty) {
         toast(language.phoneNumberNotFoundVerifyFirst);
         return false;
       }
-      
+
       if (email == null || email.isEmpty) {
         toast(language.emailNotFoundCompleteProfileFirst);
         return false;
       }
-      
+
       if (name == null || name.isEmpty) {
         toast(language.nameNotFoundCompleteProfileFirst);
         return false;
       }
-      
+
       // Format phone number with country code
       String fullPhoneNumber = '$countryCode$phoneNumber';
       fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
       if (!fullPhoneNumber.startsWith('+')) {
         fullPhoneNumber = '+$fullPhoneNumber';
       }
-      
+
       // Get question answers (convert null to false for safety, but this shouldn't happen)
       bool q1Answer = questionsModel.step4Question1.answer ?? false;
       bool q2Answer = questionsModel.step4Question2.answer ?? false;
       bool q3Answer = questionsModel.step4Question3.answer ?? false;
-      
+
       // Show loading animation while calling subscription API
-      _setLoadingSubscription(true, message: language.submittingAnswersPleaseWait, isPeriodDate: false);
-      
+      _setLoadingSubscription(true,
+          message: language.submittingAnswersPleaseWait, isPeriodDate: false);
+
       try {
         // Call subscription API
-        bool subscriptionSuccess = await PhoneVerificationService.createSubscriptionWithAnswers(
+        bool subscriptionSuccess =
+            await PhoneVerificationService.createSubscriptionWithAnswers(
           phoneNumber: fullPhoneNumber,
           email: email,
           name: name,
@@ -281,14 +286,14 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
           question2Answer: q2Answer,
           question3Answer: q3Answer,
         );
-        
+
         _setLoadingSubscription(false);
-        
+
         if (!subscriptionSuccess) {
           // Subscription failed, don't proceed
           return false;
         }
-        
+
         // Subscription successful (status 200 or 201), proceed to next step
         return true;
       } catch (e) {
@@ -318,7 +323,7 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
       // Get required data from previous steps
       String? phoneNumber = questionsModel.step2Phone.phoneNumber;
       String? countryCode = questionsModel.step2Phone.countryCode ?? "+1";
-      
+
       // Validate phone number exists
       if (phoneNumber == null || phoneNumber.isEmpty) {
         toast(language.phoneNumberNotFoundVerifyFirst);
@@ -338,11 +343,13 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
       bool q3Answer = questionsModel.step4Question3.answer ?? false;
 
       // Show loading animation while calling subscription API
-      _setLoadingSubscription(true, message: language.savingPeriodDatePleaseWait, isPeriodDate: true);
+      _setLoadingSubscription(true,
+          message: language.savingPeriodDatePleaseWait, isPeriodDate: true);
 
       try {
         // Call subscription API with period date
-        bool subscriptionSuccess = await PhoneVerificationService.createSubscriptionWithPeriodDate(
+        bool subscriptionSuccess =
+            await PhoneVerificationService.createSubscriptionWithPeriodDate(
           phoneNumber: fullPhoneNumber,
           periodDate: formattedDate,
           question1Answer: q1Answer,
@@ -503,17 +510,21 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                                         }
                                       } else if (currentStep == 7) {
                                         // Question 3 (mandatory) - calls subscription API
-                                        bool isValid = await validateStep4Question3();
+                                        bool isValid =
+                                            await validateStep4Question3();
                                         if (isValid) {
                                           currentStep++;
                                           setState(() {});
                                         }
                                       } else if (currentStep == 8) {
                                         // Period date step (last step) - validate then complete onboarding
-                                        bool isValid = await validateStep3PeriodDate();
+                                        bool isValid =
+                                            await validateStep3PeriodDate();
                                         if (isValid) {
-                                          userStore.setCycleLength(DEFAULT_CYCLE_LENGTH);
-                                          userStore.setPeriodsLength(DEFAULT_PERIOD_LENGTH);
+                                          userStore.setCycleLength(
+                                              DEFAULT_CYCLE_LENGTH);
+                                          userStore.setPeriodsLength(
+                                              DEFAULT_PERIOD_LENGTH);
                                           setValue(IS_USER_COMPLETED_QUE, true);
                                           _saveQuestionsModel();
                                           SignUpScreen().launch(context);
@@ -522,12 +533,18 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                                         currentStep++;
                                         setState(() {});
                                       }
-                                    }).visible((currentStep == 2) || (currentStep == 3 && _isPhoneVerified) || (currentStep == 4) || (currentStep >= 5 && currentStep <= 8)),
+                                    }).visible((currentStep ==
+                                        2) ||
+                                    (currentStep == 3 && _isPhoneVerified) ||
+                                    (currentStep == 4) ||
+                                    (currentStep >= 5 && currentStep <= 8)),
                                 14.height,
                                 skipButton(() {
                                   if (currentStep == 8) {
-                                    userStore.setCycleLength(DEFAULT_CYCLE_LENGTH);
-                                    userStore.setPeriodsLength(DEFAULT_PERIOD_LENGTH);
+                                    userStore
+                                        .setCycleLength(DEFAULT_CYCLE_LENGTH);
+                                    userStore.setPeriodsLength(
+                                        DEFAULT_PERIOD_LENGTH);
                                     setValue(IS_USER_COMPLETED_QUE, true);
                                     _saveQuestionsModel();
                                     SignUpScreen().launch(context);
@@ -535,7 +552,13 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                                     currentStep++;
                                     setState(() {});
                                   }
-                                }).visible(currentStep > 2 && currentStep != 3 && currentStep != 4 && currentStep != 5 && currentStep != 6 && currentStep != 7 && currentStep == 8),
+                                }).visible(currentStep > 2 &&
+                                    currentStep != 3 &&
+                                    currentStep != 4 &&
+                                    currentStep != 5 &&
+                                    currentStep != 6 &&
+                                    currentStep != 7 &&
+                                    currentStep == 8),
                                 14.height,
                               ],
                             ),
@@ -551,7 +574,10 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                                 children: [
                                   // Question text above button
                                   Text(
-                                    language.alreadyHaveAnAccount.split('?').first + '?',
+                                    language.alreadyHaveAnAccount
+                                            .split('?')
+                                            .first +
+                                        '?',
                                     style: boldTextStyle(
                                       size: 16,
                                       weight: FontWeight.w400,
@@ -563,8 +589,13 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                                   // Button with action text only
                                   AppButton(
                                     disabledColor: Colors.grey.shade300,
-                                    text: language.alreadyHaveAnAccount.split('?').length > 1
-                                        ? language.alreadyHaveAnAccount.split('?')[1].trim()
+                                    text: language.alreadyHaveAnAccount
+                                                .split('?')
+                                                .length >
+                                            1
+                                        ? language.alreadyHaveAnAccount
+                                            .split('?')[1]
+                                            .trim()
                                         : language.login,
                                     textStyle: boldTextStyle(
                                       color: Colors.white,
@@ -810,7 +841,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
 
   Widget step4Question1() {
     return YesNoQuestionWidget(
-      question: questionsModel.step4Question1.question ?? language.doYouHavePeriodAlmostEveryMonth,
+      question: questionsModel.step4Question1.question ??
+          language.doYouHavePeriodAlmostEveryMonth,
       initialAnswer: questionsModel.step4Question1.answer,
       onAnswerSelected: (bool answer) {
         questionsModel.step4Question1.answer = answer;
@@ -826,7 +858,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
 
   Widget step4Question2() {
     return YesNoQuestionWidget(
-      question: questionsModel.step4Question2.question ?? language.doYouHavePeriodWhenExpected,
+      question: questionsModel.step4Question2.question ??
+          language.doYouHavePeriodWhenExpected,
       initialAnswer: questionsModel.step4Question2.answer,
       onAnswerSelected: (bool answer) {
         questionsModel.step4Question2.answer = answer;
@@ -842,7 +875,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
 
   Widget step4Question3() {
     return YesNoQuestionWidget(
-      question: questionsModel.step4Question3.question ?? language.areYouBreastfeeding,
+      question: questionsModel.step4Question3.question ??
+          language.areYouBreastfeeding,
       initialAnswer: questionsModel.step4Question3.answer,
       onAnswerSelected: (bool answer) {
         questionsModel.step4Question3.answer = answer;
@@ -854,6 +888,7 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
         }
       },
       invertSelectionColor: true, // "Are you breastfeeding?" – No = green
+      swapAnswerIcons: true,
     );
   }
 
@@ -924,8 +959,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                         ),
                         24.height,
                         Text(
-                          _loadingMessage.isNotEmpty 
-                              ? _loadingMessage 
+                          _loadingMessage.isNotEmpty
+                              ? _loadingMessage
                               : language.submittingAnswersPleaseWait,
                           style: boldTextStyle(
                             size: 16,
@@ -957,8 +992,9 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
     return Observer(
       builder: (context) {
         // Get current language locale for calendar
-        final locale = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode);
-        
+        final locale = getStringAsync(SELECTED_LANGUAGE_CODE,
+            defaultValue: defaultLanguageCode);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -973,7 +1009,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
             ),
             10.height,
             TableCalendar(
-              firstDay: DateTime.now().subtract(Duration(days: 35)), // Allow some buffer for navigation
+              firstDay: DateTime.now().subtract(
+                  Duration(days: 35)), // Allow some buffer for navigation
               lastDay: DateTime.now(), // Today is the last selectable day
               focusedDay: _focusedDay!,
               calendarFormat: CalendarFormat.month,
@@ -987,7 +1024,7 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
                   _selectedDay = null;
                   _focusedDay = focusedDay;
                 });
-                
+
                 // Show confirmation dialog with selected date
                 _showDateConfirmationDialog(selectedDay);
               },
@@ -1023,9 +1060,11 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
   /// Show confirmation dialog when a date is selected
   void _showDateConfirmationDialog(DateTime selectedDay) {
     // Get current language locale for date formatting
-    final locale = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode);
-    final formattedDate = DateFormat('dd MMMM yyyy', locale).format(selectedDay);
-    
+    final locale = getStringAsync(SELECTED_LANGUAGE_CODE,
+        defaultValue: defaultLanguageCode);
+    final formattedDate =
+        DateFormat('dd MMMM yyyy', locale).format(selectedDay);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1043,7 +1082,8 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1084,26 +1124,18 @@ class _QuestionListScreenState extends State<QuestionsListScreen> with SingleTic
               ),
             ),
             // Next button
-            ElevatedButton(
+            buildDateConfirmationButton(
+              label: language.next,
               onPressed: () {
-                // Save the selected date
                 setState(() {
                   _selectedDay = selectedDay;
                   _focusedDay = selectedDay;
                 });
-                questionsModel.step3.selectedLastPeriodDate = DateFormat('yyyy-MM-dd').format(selectedDay);
+                questionsModel.step3.selectedLastPeriodDate =
+                    DateFormat('yyyy-MM-dd').format(selectedDay);
                 _saveQuestionsModel();
-                
                 Navigator.of(context).pop();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              child: Text(language.next),
             ),
           ],
         );

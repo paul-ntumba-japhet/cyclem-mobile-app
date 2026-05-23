@@ -104,10 +104,9 @@ class _StripeCheckoutState extends State<StripeCheckout> {
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(language.cancel),
             ),
-            ElevatedButton(
+            buildDateConfirmationButton(
+              label: language.next,
               onPressed: () => Navigator.of(ctx).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-              child: Text(language.next),
             ),
           ],
         );
@@ -309,7 +308,8 @@ class _StripeCheckoutState extends State<StripeCheckout> {
 
     try {
       // Fetch plans for USD currency (default)
-      List<PaymentPlanModel> plans = await getPaymentPlansApi('USD');
+      List<PaymentPlanModel> plans =
+          orderPaymentPlansForDisplay(await getPaymentPlansApi('USD'));
       
       setState(() {
         _paymentPlans = plans;
@@ -519,14 +519,8 @@ class _StripeCheckoutState extends State<StripeCheckout> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section title
-          Text(
-            'Choisissez votre plan',
-            style: TextStyle(
-              color: mainColorText,
-              fontSize: 16,
-              fontWeight: FontWeight.normal,
-            ),
-          ),
+          Text('Choisissez votre plan',
+              style: boldTextStyle(size: 18, color: mainColorText)),
           
           const SizedBox(height: 20),
           
@@ -561,7 +555,7 @@ class _StripeCheckoutState extends State<StripeCheckout> {
               ),
             ),
           
-          // Payment plans list
+          // Payment plans list (mobile-checkout style cards)
           if (!_isLoadingPlans && _errorMessage.isEmpty)
             ...(_paymentPlans.length > 3 
                 ? _paymentPlans.take(3).toList() 
@@ -597,6 +591,7 @@ class _StripeCheckoutState extends State<StripeCheckout> {
     
     return SizedBox(
       width: double.infinity,
+      height: 52,
       child: ElevatedButton(
         onPressed: planToUse != null
             ? () async {
@@ -604,29 +599,86 @@ class _StripeCheckoutState extends State<StripeCheckout> {
               }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
-          elevation: planToUse != null ? 2 : 0,
+          elevation: 0,
         ),
-        child: Text(
-          'Continuer',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-            color: planToUse != null ? Colors.white : Colors.grey,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              colors: [primaryColor, const Color(0xFF7A55FF)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              language.continueText,
+              style: boldTextStyle(
+                size: 15,
+                color: planToUse != null ? Colors.white : Colors.grey,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Build a single payment plan card
+  String _getPlanTitle(PaymentPlanModel plan) {
+    switch (plan.displayTypeIndex) {
+      case 0:
+        return language.mobileMoneyTrialPlan;
+      case 1:
+        return language.mobileMoneyMonthlyPlan;
+      case 2:
+        return language.mobileMoneyAnnualPlan;
+      default:
+        return language.mobileMoneyMonthlyPlan;
+    }
+  }
+
+  List<String> _getPlanFeatures(PaymentPlanModel plan) {
+    switch (plan.displayTypeIndex) {
+      case 0:
+        return <String>[
+          language.mobileMoneyTrialFeatureBasic,
+          language.mobileMoneyTrialFeatureDuration,
+        ];
+      case 1:
+        return <String>[
+          language.mobileMoneyFeatureFullAccess,
+          language.mobileMoneyFeaturePersonalizedAdvice,
+          language.mobileMoneyFeatureAdvancedNotifications,
+          language.mobileMoneyFeatureSupport,
+        ];
+      case 2:
+        return <String>[
+          language.mobileMoneyFeatureFullAccess,
+          language.mobileMoneyFeaturePersonalizedAdvice,
+          language.mobileMoneyFeatureAdvancedNotifications,
+          language.mobileMoneyFeaturePrioritySupport,
+        ];
+      default:
+        return <String>[language.mobileMoneyFeatureFullAccess];
+    }
+  }
+
+  String? _getPlanBadge(PaymentPlanModel plan) {
+    if (plan.displayTypeIndex == 1) return language.mobileMoneyMostPopular;
+    return null;
+  }
+
+  /// Build a single payment plan card (mobile-checkout style)
   Widget _buildPaymentPlanCard(PaymentPlanModel plan) {
     bool isSelected = _selectedPlan?.priceIdStripe == plan.priceIdStripe;
+    final String title = _getPlanTitle(plan);
+    final String? badge = _getPlanBadge(plan);
+    final List<String> features = _getPlanFeatures(plan);
     
     return InkWell(
       onTap: () {
@@ -634,69 +686,56 @@ class _StripeCheckoutState extends State<StripeCheckout> {
           _selectedPlan = plan;
         });
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? primaryColor : Colors.grey.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
+            color: isSelected ? primaryColor : Colors.grey.shade200,
+            width: isSelected ? 1.6 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Radio button indicator
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? primaryColor : Colors.grey,
-                  width: 2,
-                ),
-                color: isSelected ? primaryColor : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : null,
+            Row(
+              children: [
+                Expanded(child: Text(title, style: boldTextStyle(size: 16))),
+                if ((badge ?? '').isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8FBEE),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: primaryTextStyle(
+                        color: const Color(0xFF119946),
+                        size: 11,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            
-            const SizedBox(width: 16),
-            
-            // Plan details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Plan description
-                  Text(
-                    plan.description,
-                    style: TextStyle(
-                      color: mainColorText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 6),
-                  
-                  // Plan amount
-                  Text(
-                    '${plan.montant} ${plan.currency}',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 6),
+            Text(
+              '${plan.montant} ${plan.currency}',
+              style: boldTextStyle(size: 18, color: primaryColor),
+            ),
+            const SizedBox(height: 10),
+            ...features.map(
+              (feature) => Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(feature, style: primaryTextStyle(size: 13))),
+                  ],
+                ),
               ),
             ),
           ],

@@ -10,6 +10,7 @@ import '../../model/user/user_models/user_model.dart';
 import '../../network/rest_api.dart';
 import '../../utils/app_common.dart';
 import '../../utils/app_constants.dart';
+import 'sign_in_screen.dart';
 //import '../../extensions/app_text_field.dart';
 import '../screens.dart';
 
@@ -21,6 +22,89 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  bool _isAccountAlreadyExistsError(String? message) {
+    if (message == null) return false;
+
+    final normalized = message.toLowerCase();
+    return normalized.contains('409') ||
+        normalized.contains('already exists') ||
+        normalized.contains('already exist') ||
+        normalized.contains('already registered') ||
+        normalized.contains('user already exists') ||
+        normalized.contains('existe deja') ||
+        normalized.contains('existe déjà');
+  }
+
+  Future<void> _showAccountExistsAnimationAndRedirect() async {
+    if (!mounted) return;
+
+    final message = language.accountAlreadyExistsRedirectMessage;
+    BuildContext? dialogContext;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                duration: Duration(milliseconds: 700),
+                curve: Curves.easeOutBack,
+                tween: Tween<double>(begin: 0.6, end: 1.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_search_rounded,
+                    color: Colors.orange.shade700,
+                    size: 34,
+                  ),
+                ),
+              ),
+              16.height,
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: primaryTextStyle(size: 14),
+              ),
+              14.height,
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.6),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    await Future.delayed(Duration(seconds: 2));
+
+    if (dialogContext != null && Navigator.of(dialogContext!).canPop()) {
+      Navigator.of(dialogContext!).pop();
+    }
+
+    if (!mounted) return;
+    UserSignInScreen().launch(context, isNewTask: true);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +141,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (hasInvalidDrcLeadingZero(
+      countryCode: countryCode,
+      phoneNumber: phoneNumber,
+    )) {
+      toast(getDrcLeadingZeroErrorMessage());
+      return;
+    }
+
     // Format phone number with country code
     String fullPhoneNumber = '$countryCode$phoneNumber';
     fullPhoneNumber = fullPhoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
@@ -75,7 +167,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       appStore.setLoading(false);
 
       if (loginResult.status == false || loginResult.data == null) {
-        toast(loginResult.message ?? language.loginFailedPleaseCheckCredentials);
+        final errorMessage =
+            loginResult.message ?? language.loginFailedPleaseCheckCredentials;
+        if (_isAccountAlreadyExistsError(errorMessage)) {
+          await _showAccountExistsAnimationAndRedirect();
+          return;
+        }
+        toast(errorMessage);
         return;
       }
 
@@ -106,7 +204,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       SignupLoadingScreen().launch(context, isNewTask: true);
     } catch (e) {
       appStore.setLoading(false);
-      toast(language.somethingWentWrong);
+      final rawError = e.toString();
+      final cleanError = rawError.startsWith('Exception:')
+          ? rawError.replaceFirst('Exception:', '').trim()
+          : rawError;
+      if (_isAccountAlreadyExistsError(cleanError)) {
+        await _showAccountExistsAnimationAndRedirect();
+        return;
+      }
+      toast(cleanError.isNotEmpty ? cleanError : language.somethingWentWrong);
     }
   }
 
